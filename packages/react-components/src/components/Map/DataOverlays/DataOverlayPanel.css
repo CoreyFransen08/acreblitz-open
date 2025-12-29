@@ -1,0 +1,311 @@
+/**
+ * DataOverlayPanel Styles
+ *
+ * Follows the existing Map.css conventions with acb- prefix
+ */
+
+/* ============================================
+   Data Overlay Panel
+   ============================================ */
+
+.acb-data-overlay-panel {
+  position: absolute;
+  z-index: 1000;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+  min-width: 200px;
+  max-width: 280px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  user-select: none;
+}
+
+/* Position variants */
+.acb-data-overlay-panel--topleft {
+  top: 80px;
+  left: 10px;
+}
+
+.acb-data-overlay-panel--topright {
+  top: 80px;
+  right: 10px;
+}
+
+.acb-data-overlay-panel--bottomleft {
+  bottom: 30px;
+  left: 10px;
+}
+
+.acb-data-overlay-panel--bottomright {
+  bottom: 30px;
+  right: 10px;
+}
+
+/* ============================================
+   Header
+   ============================================ */
+
+.acb-data-overlay-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  transition: background-color 0.15s;
+}
+
+.acb-data-overlay-panel__header:hover {
+  background-color: #f9fafb;
+}
+
+.acb-data-overlay-panel__header:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+.acb-data-overlay-panel__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.acb-data-overlay-panel__toggle {
+  width: 20px;
+  height: 20px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.acb-data-overlay-panel--collapsed .acb-data-overlay-panel__toggle {
+  transform: rotate(-90deg);
+}
+
+.acb-data-overlay-panel--collapsed .acb-data-overlay-panel__header {
+  border-bottom: none;
+  border-radius: 4px;
+}
+
+/* ============================================
+   Content
+   ============================================ */
+
+.acb-data-overlay-panel__content {
+  padding: 4px 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.acb-data-overlay-panel--collapsed .acb-data-overlay-panel__content {
+  display: none;
+}
+
+/* ============================================
+   Group & Category
+   ============================================ */
+
+.acb-data-overlay-panel__group {
+  margin-bottom: 4px;
+}
+
+.acb-data-overlay-panel__group:last-child {
+  margin-bottom: 0;
+}
+
+.acb-data-overlay-panel__category {
+  padding: 6px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   Overlay Item
+   ============================================ */
+
+.acb-data-overlay-panel__item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  margin: 0;
+}
+
+.acb-data-overlay-panel__item:hover {
+  background-color: #f3f4f6;
+}
+
+.acb-data-overlay-panel__checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  margin-right: 10px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.acb-data-overlay-panel__icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.acb-data-overlay-panel__label {
+  font-size: 13px;
+  color: #374151;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acb-data-overlay-panel__loading {
+  width: 14px;
+  height: 14px;
+  margin-left: 8px;
+  color: #3b82f6;
+  animation: acb-data-overlay-spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes acb-data-overlay-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   Soil Feature Tooltip
+   ============================================ */
+
+.acb-soil-tooltip-container {
+  padding: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.acb-soil-tooltip-container .leaflet-tooltip-content {
+  margin: 0;
+}
+
+.acb-soil-tooltip {
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  min-width: 180px;
+}
+
+.acb-soil-tooltip__title {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.acb-soil-tooltip__property {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 12px;
+}
+
+.acb-soil-tooltip__property:last-of-type {
+  margin-bottom: 0;
+}
+
+.acb-soil-tooltip__label {
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.acb-soil-tooltip__value {
+  color: #374151;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+.acb-soil-tooltip__hint {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ============================================
+   Mobile Responsive
+   ============================================ */
+
+@media (max-width: 768px) {
+  .acb-data-overlay-panel {
+    max-width: calc(100vw - 100px);
+  }
+
+  .acb-data-overlay-panel--topleft,
+  .acb-data-overlay-panel--topright {
+    top: 70px;
+  }
+
+  .acb-data-overlay-panel__item {
+    padding: 12px;
+  }
+
+  .acb-data-overlay-panel__checkbox {
+    width: 20px;
+    height: 20px;
+  }
+
+  .acb-data-overlay-panel__label {
+    font-size: 15px;
+  }
+
+  .acb-soil-tooltip {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .acb-data-overlay-panel {
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+
+  .acb-data-overlay-panel--topright,
+  .acb-data-overlay-panel--bottomright {
+    right: 10px;
+    left: auto;
+    max-width: calc(100vw - 80px);
+  }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  .acb-data-overlay-panel {
+    display: none;
+  }
+}

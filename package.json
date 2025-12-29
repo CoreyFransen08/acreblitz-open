@@ -1,0 +1,23 @@
+{
+  "name": "acreblitz-opensrc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AcreBlitz Open Source Components and API Gateway",
+  "workspaces": [
+    "packages/*",
+    "demo_app"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:demo": "npm run dev --workspace=@acreblitz/demo-app",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,396 @@
+/**
+ * Map Component Styles - AcreBlitz React Components
+ * Includes Leaflet overrides and mobile responsiveness
+ */
+
+/* ============================================
+   Container Styles
+   ============================================ */
+
+.acb-map-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.acb-map-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Ensure Leaflet container takes full space */
+.acb-map-container .leaflet-container {
+  width: 100%;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  background-color: #f3f4f6;
+}
+
+/* Remove browser focus outline on SVG elements (soil polygons, etc.) */
+.acb-map-container .leaflet-interactive:focus {
+  outline: none;
+}
+
+.acb-map-container svg:focus,
+.acb-map-container path:focus {
+  outline: none;
+}
+
+.acb-map-container .leaflet-overlay-pane svg {
+  outline: none;
+}
+
+/* ============================================
+   Loading Skeleton
+   ============================================ */
+
+.acb-map-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #e5e7eb 25%, #d1d5db 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: acb-map-shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}
+
+.acb-map-skeleton-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #9ca3af;
+}
+
+.acb-map-skeleton-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+.acb-map-skeleton-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.acb-map-skeleton-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@keyframes acb-map-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+
+.acb-map-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+  background-color: #fef2f2;
+  border-radius: 0.5rem;
+  border: 1px solid #fecaca;
+}
+
+.acb-map-error-icon {
+  width: 3rem;
+  height: 3rem;
+  color: #ef4444;
+}
+
+.acb-map-error-title {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ef4444;
+}
+
+.acb-map-error-message {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* ============================================
+   Leaflet Control Overrides
+   ============================================ */
+
+/* Zoom Control */
+.acb-map-container .leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.acb-map-container .leaflet-control-zoom a {
+  background-color: white;
+  color: #374151;
+  border: none !important;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  font-size: 18px;
+}
+
+.acb-map-container .leaflet-control-zoom a:hover {
+  background-color: #f3f4f6;
+}
+
+.acb-map-container .leaflet-control-zoom-in {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* Layer Control */
+.acb-map-container .leaflet-control-layers {
+  border: none !important;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+.acb-map-container .leaflet-control-layers-toggle {
+  background-color: white;
+  width: 36px;
+  height: 36px;
+}
+
+.acb-map-container .leaflet-control-layers-expanded {
+  padding: 8px 12px;
+  background-color: white;
+}
+
+.acb-map-container .leaflet-control-layers-base label,
+.acb-map-container .leaflet-control-layers-overlays label {
+  padding: 4px 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Scale Control */
+.acb-map-container .leaflet-control-scale-line {
+  border-color: #374151;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  padding: 2px 5px 1px;
+}
+
+/* Attribution */
+.acb-map-container .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  padding: 2px 5px;
+}
+
+.acb-map-container .leaflet-control-attribution a {
+  color: #3b82f6;
+}
+
+/* ============================================
+   Draw Control Styles
+   ============================================ */
+
+.acb-map-container .leaflet-draw-toolbar {
+  margin-top: 0;
+}
+
+.acb-map-container .leaflet-draw-toolbar a {
+  background-color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+}
+
+.acb-map-container .leaflet-draw-toolbar a:hover {
+  background-color: #f3f4f6;
+}
+
+.acb-map-container .leaflet-draw-actions {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+.acb-map-container .leaflet-draw-actions a {
+  background-color: transparent;
+  border: none;
+  color: #374151;
+  font-size: 12px;
+}
+
+.acb-map-container .leaflet-draw-actions a:hover {
+  background-color: #f3f4f6;
+}
+
+/* Draw tooltip */
+.acb-map-container .leaflet-draw-tooltip {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: none;
+}
+
+.acb-map-container .leaflet-draw-tooltip-single {
+  margin-top: -12px;
+  margin-left: 14px;
+}
+
+.acb-map-container .leaflet-draw-tooltip-subtext {
+  color: #d1d5db;
+}
+
+/* ============================================
+   Measure Control Styles
+   ============================================ */
+
+.acb-map-container .leaflet-control-measure {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+}
+
+.acb-map-container .leaflet-control-measure a {
+  background-color: white;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.acb-map-container .leaflet-control-measure a:hover {
+  background-color: #f3f4f6;
+}
+
+/* ============================================
+   Gesture Handling Overlay
+   ============================================ */
+
+.acb-map-container .leaflet-gesture-handling-touch-warning,
+.acb-map-container .leaflet-gesture-handling-scroll-warning {
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 16px 24px;
+  border-radius: 8px;
+}
+
+/* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Larger touch targets for controls */
+  .acb-map-container .leaflet-control-zoom a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 20px !important;
+  }
+
+  .acb-map-container .leaflet-draw-toolbar a {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .acb-map-container .leaflet-control-layers-toggle {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* Larger checkboxes/radios in layer control */
+  .acb-map-container .leaflet-control-layers-overlays label,
+  .acb-map-container .leaflet-control-layers-base label {
+    padding: 8px 4px;
+    font-size: 16px;
+  }
+
+  .acb-map-container .leaflet-control-layers-selector {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+  }
+
+  /* Measure control adjustments */
+  .acb-map-container .leaflet-control-measure a {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+  }
+
+  /* Attribution smaller on mobile */
+  .acb-map-container .leaflet-control-attribution {
+    font-size: 9px;
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Very small screens: further simplify */
+  .acb-map-container .leaflet-control-layers {
+    max-width: calc(100vw - 80px);
+  }
+
+  .acb-map-container .leaflet-control-layers-expanded {
+    padding: 6px 10px;
+  }
+
+  /* Stack draw toolbar vertically if needed */
+  .acb-map-container .leaflet-draw-section {
+    margin-top: 8px;
+  }
+}
+
+/* ============================================
+   Touch-specific adjustments
+   ============================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Touch devices: larger hit areas */
+  .acb-map-container .leaflet-interactive {
+    cursor: pointer;
+  }
+
+  /* Improve touch feedback on controls */
+  .acb-map-container .leaflet-control-zoom a:active,
+  .acb-map-container .leaflet-draw-toolbar a:active,
+  .acb-map-container .leaflet-control-layers-toggle:active {
+    background-color: #e5e7eb;
+  }
+}
+
+/* ============================================
+   Print styles
+   ============================================ */
+
+@media print {
+  .acb-map-container .leaflet-control-zoom,
+  .acb-map-container .leaflet-control-layers,
+  .acb-map-container .leaflet-draw-toolbar,
+  .acb-map-container .leaflet-control-measure {
+    display: none !important;
+  }
+}

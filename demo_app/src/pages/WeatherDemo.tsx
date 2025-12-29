@@ -1,0 +1,258 @@
+import { useState } from 'react';
+import { Weather, WeatherSkeleton } from '@acreblitz/react-components';
+import type { WeatherData } from '@acreblitz/react-components';
+
+// Sample locations for quick testing
+const sampleLocations = [
+  { name: 'Kansas (Center of US)', lat: 39.7456, lng: -97.0892 },
+  { name: 'New York, NY', lat: 40.7128, lng: -74.006 },
+  { name: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
+  { name: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
+  { name: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
+  { name: 'Denver, CO', lat: 39.7392, lng: -104.9903 },
+];
+
+export function WeatherDemo() {
+  const [latitude, setLatitude] = useState(39.7456);
+  const [longitude, setLongitude] = useState(-97.0892);
+  const [units, setUnits] = useState<'imperial' | 'metric'>('imperial');
+  const [compact, setCompact] = useState(false);
+  const [showRefresh, setShowRefresh] = useState(true);
+  const [forecastDays, setForecastDays] = useState(7);
+  const [lastData, setLastData] = useState<WeatherData | null>(null);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+
+  const handleLocationSelect = (location: (typeof sampleLocations)[0]) => {
+    setLatitude(location.lat);
+    setLongitude(location.lng);
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="section-title">Weather Component</h1>
+        <p className="section-description">
+          Display current weather conditions and hourly forecast for US locations
+          using the National Weather Service API.
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Controls Panel */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Configuration
+            </h2>
+
+            {/* Quick Location Select */}
+            <div className="mb-6">
+              <label className="label">Quick Location Select</label>
+              <select
+                className="input"
+                onChange={(e) => {
+                  const location = sampleLocations[parseInt(e.target.value)];
+                  if (location) handleLocationSelect(location);
+                }}
+              >
+                {sampleLocations.map((loc, idx) => (
+                  <option key={loc.name} value={idx}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Coordinates */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="label">Latitude</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={latitude}
+                  onChange={(e) => setLatitude(parseFloat(e.target.value))}
+                  step="0.0001"
+                  min="-90"
+                  max="90"
+                />
+              </div>
+              <div>
+                <label className="label">Longitude</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={longitude}
+                  onChange={(e) => setLongitude(parseFloat(e.target.value))}
+                  step="0.0001"
+                  min="-180"
+                  max="180"
+                />
+              </div>
+            </div>
+
+            {/* Units */}
+            <div className="mb-6">
+              <label className="label">Units</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="units"
+                    value="imperial"
+                    checked={units === 'imperial'}
+                    onChange={() => setUnits('imperial')}
+                    className="text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">Imperial (°F, mph)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="units"
+                    value="metric"
+                    checked={units === 'metric'}
+                    onChange={() => setUnits('metric')}
+                    className="text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">Metric (°C, m/s)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Forecast Days */}
+            <div className="mb-6">
+              <label className="label">Forecast Hours: {forecastDays * 24}</label>
+              <input
+                type="range"
+                min="1"
+                max="7"
+                value={forecastDays}
+                onChange={(e) => setForecastDays(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            {/* Toggles */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={compact}
+                  onChange={(e) => setCompact(e.target.checked)}
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700">Compact Mode</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showRefresh}
+                  onChange={(e) => setShowRefresh(e.target.checked)}
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700">Show Refresh Button</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Last Data Info */}
+          {lastData && (
+            <div className="card p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Last Loaded Data
+              </h2>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Location:</dt>
+                  <dd className="text-gray-900 font-medium">
+                    {lastData.location.city}, {lastData.location.state}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Grid ID:</dt>
+                  <dd className="text-gray-900 font-medium">
+                    {lastData.location.gridId}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Updated:</dt>
+                  <dd className="text-gray-900 font-medium">
+                    {new Date(lastData.updated).toLocaleTimeString()}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Forecast Periods:</dt>
+                  <dd className="text-gray-900 font-medium">
+                    {lastData.hourlyForecast.length}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          {/* Skeleton Demo */}
+          <div className="card p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Loading Skeleton
+            </h2>
+            <label className="flex items-center gap-3 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={showSkeleton}
+                onChange={(e) => setShowSkeleton(e.target.checked)}
+                className="rounded text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-gray-700">Show WeatherSkeleton</span>
+            </label>
+            {showSkeleton && <WeatherSkeleton />}
+          </div>
+        </div>
+
+        {/* Component Preview */}
+        <div className="lg:col-span-2">
+          <div className="card">
+            <div className="bg-gray-100 px-6 py-3 border-b border-gray-200">
+              <h2 className="text-sm font-medium text-gray-700">Live Preview</h2>
+            </div>
+            <div className="p-6">
+              <Weather
+                latitude={latitude}
+                longitude={longitude}
+                units={units}
+                compact={compact}
+                showRefreshButton={showRefresh}
+                forecastDays={forecastDays}
+                onDataLoad={setLastData}
+                onError={(error) => console.error('Weather error:', error)}
+              />
+            </div>
+          </div>
+
+          {/* Code Example */}
+          <div className="card mt-6">
+            <div className="bg-gray-100 px-6 py-3 border-b border-gray-200">
+              <h2 className="text-sm font-medium text-gray-700">Code</h2>
+            </div>
+            <div className="bg-gray-900 text-gray-100 p-6 overflow-x-auto">
+              <pre className="text-sm">
+                <code>{`import { Weather } from '@acreblitz/react-components';
+
+<Weather
+  latitude={${latitude}}
+  longitude={${longitude}}
+  units="${units}"
+  compact={${compact}}
+  showRefreshButton={${showRefresh}}
+  forecastDays={${forecastDays}}
+  onDataLoad={(data) => console.log('Loaded:', data)}
+  onError={(error) => console.error('Error:', error)}
+/>`}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

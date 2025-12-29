@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    depends_on:
+      node-service:
+        condition: service_healthy
+      python-service:
+        condition: service_healthy
+    networks:
+      - gateway-network
+    restart: unless-stopped
+
+  node-service:
+    build:
+      context: ./node-service
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+    expose:
+      - "3001"
+    networks:
+      - gateway-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  python-service:
+    build:
+      context: ./python-service
+      dockerfile: Dockerfile
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - PORT=8000
+    expose:
+      - "8000"
+    networks:
+      - gateway-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  gateway-network:
+    driver: bridge

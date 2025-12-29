@@ -1,0 +1,85 @@
+{
+  "name": "@acreblitz/react-components",
+  "version": "0.1.0",
+  "description": "Reusable React components from AcreBlitz",
+  "license": "MIT",
+  "author": "AcreBlitz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acreblitz/acreblitz",
+    "directory": "opensrc/packages/react-components"
+  },
+  "keywords": [
+    "react",
+    "components",
+    "weather",
+    "map",
+    "leaflet",
+    "agriculture",
+    "acreblitz"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./styles.css": "./dist/index.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "*.css",
+    "**/leaflet-measure.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.0.0",
+    "@types/leaflet": "^1.9.8",
+    "@types/leaflet-draw": "^1.0.11",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "@vitest/coverage-v8": "^2.1.0",
+    "jsdom": "^25.0.0",
+    "msw": "^2.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.2",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "date-fns": "^3.6.0",
+    "leaflet": "^1.9.4",
+    "leaflet-draw": "^1.0.4",
+    "leaflet-gesture-handling": "^1.2.2",
+    "react-leaflet": "^4.2.1",
+    "react-leaflet-draw": "^0.20.4"
+  }
+}
