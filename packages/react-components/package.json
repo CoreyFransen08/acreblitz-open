@@ -6,8 +6,8 @@
   "author": "AcreBlitz",
   "repository": {
     "type": "git",
-    "url": "https://github.com/acreblitz/acreblitz",
-    "directory": "opensrc/packages/react-components"
+    "url": "https://github.com/CoreyFransen08/acreblitz-open/tree/main/",
+    "directory": "packages/react-components"
   },
   "keywords": [
     "react",
@@ -42,7 +42,8 @@
   ],
   "sideEffects": [
     "*.css",
-    "**/leaflet-measure.ts"
+    "**/leaflet-measure.ts",
+    "**/leaflet-click-forecast.ts"
   ],
   "scripts": {
     "build": "tsup",

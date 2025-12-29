@@ -59,3 +59,6 @@ export {
   RadarAnimationControls,
   useRadarAnimation,
 } from './WeatherRadar';
+
+// Click Forecast
+export { ClickForecastControl } from './plugins/ClickForecastControl';

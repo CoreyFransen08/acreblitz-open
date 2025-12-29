@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Map, MapSkeleton, useMapInstance, SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG, WEATHER_RADAR_OVERLAY_CONFIG, DEFAULT_LAYERS } from '@acreblitz/react-components';
 import type {
   LeafletMap,
@@ -9,15 +10,19 @@ import type {
   SoilFeatureSelectEvent,
   HydroFeatureClickEvent,
   HydroFeatureSelectEvent,
+  DWMLForecastData,
 } from '@acreblitz/react-components';
 
-// Sample locations
+// Sample locations - Agricultural regions
 const sampleLocations = [
-  { name: 'Kansas (Center of US)', lat: 39.7456, lng: -97.0892 },
-  { name: 'New York, NY', lat: 40.7128, lng: -74.006 },
-  { name: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
-  { name: 'Grand Canyon, AZ', lat: 36.1069, lng: -112.1129 },
-  { name: 'Yellowstone, WY', lat: 44.4280, lng: -110.5885 },
+  { name: 'Central Kansas (Wheat Belt)', lat: 38.5, lng: -98.0 },
+  { name: 'Iowa Corn Belt', lat: 41.8781, lng: -93.0977 },
+  { name: 'Central Valley, CA', lat: 36.7378, lng: -119.7871 },
+  { name: 'Nebraska Panhandle', lat: 41.4925, lng: -101.3598 },
+  { name: 'Illinois Corn Belt', lat: 40.3495, lng: -88.9861 },
+  { name: 'Texas Panhandle', lat: 35.2219, lng: -101.8313 },
+  { name: 'North Dakota Wheat', lat: 47.5515, lng: -101.0020 },
+  { name: 'Georgia Peanut Region', lat: 31.5785, lng: -84.1557 },
 ];
 
 interface EventLog {
@@ -32,7 +37,7 @@ export function MapDemo() {
   const { flyTo, exportGeoJSON, clearDrawnItems, isReady, getCenter, getZoom } = useMapInstance({ mapRef });
 
   // Map settings
-  const [center, setCenter] = useState<[number, number]>([39.7456, -97.0892]);
+  const [center, setCenter] = useState<[number, number]>([38.5, -98.0]);
   const [zoom, _setZoom] = useState(13);
   const [height, _setHeight] = useState('500px');
 
@@ -51,6 +56,9 @@ export function MapDemo() {
 
   // Measurement
   const [measureEnabled, setMeasureEnabled] = useState(true);
+
+  // Click Forecast
+  const [clickForecastEnabled, setClickForecastEnabled] = useState(true);
 
   // Data Overlays
   const [dataOverlaysEnabled, setDataOverlaysEnabled] = useState(true);
@@ -111,11 +119,21 @@ export function MapDemo() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="section-title">Map Component</h1>
-        <p className="section-description">
-          Interactive Leaflet-based map with satellite imagery, drawing tools,
-          measurement, layer switching, and data overlays (SSURGO soil data, 3DHP hydro features).
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="section-title">Map Component</h1>
+            <p className="section-description">
+              Interactive Leaflet-based map with satellite imagery, drawing tools,
+              measurement, layer switching, and data overlays (SSURGO soil data, 3DHP hydro features).
+            </p>
+          </div>
+          <Link
+            to="/docs/components/map/map"
+            className="btn-outline whitespace-nowrap"
+          >
+            View Documentation
+          </Link>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-4 gap-6">
@@ -252,6 +270,25 @@ export function MapDemo() {
                 <span className="text-xs text-gray-500">Enabled</span>
               </label>
             </div>
+          </div>
+
+          {/* Click Forecast */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-semibold text-gray-900">Click Forecast</h2>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={clickForecastEnabled}
+                  onChange={(e) => setClickForecastEnabled(e.target.checked)}
+                  className="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-xs text-gray-500">Enabled</span>
+              </label>
+            </div>
+            <p className="text-xs text-gray-500">
+              Click the sun icon, then click anywhere on the map to see a 48-hour forecast from NWS.
+            </p>
           </div>
 
           {/* Data Overlays */}
@@ -420,6 +457,16 @@ export function MapDemo() {
                     : undefined
                 }
                 measure={measureEnabled ? { enabled: true } : undefined}
+                clickForecast={
+                  clickForecastEnabled
+                    ? {
+                        enabled: true,
+                        position: 'topright',
+                        forecastHours: 48,
+                        units: 'imperial',
+                      }
+                    : undefined
+                }
                 dataOverlays={
                   dataOverlaysEnabled
                     ? {
@@ -445,6 +492,10 @@ export function MapDemo() {
                     addEvent('Draw Created', `${e.layerType} added`),
                   onMeasureComplete: (e: MeasureCompleteEvent) =>
                     addEvent('Measure', `${e.mode}: ${e.displayValue}`),
+                  onClickForecastFetched: (data: DWMLForecastData) =>
+                    addEvent('Forecast', `${data.location.city}, ${data.location.state} - ${data.hourly.length} hours`),
+                  onClickForecastModeChange: (enabled: boolean) =>
+                    addEvent('Forecast Mode', enabled ? 'Enabled' : 'Disabled'),
                   onSoilFeatureClick: (e: SoilFeatureClickEvent) =>
                     addEvent('Soil Click', `${e.feature.properties.muname || e.feature.properties.musym}`),
                   onSoilFeatureSelect: (e: SoilFeatureSelectEvent) => {
@@ -462,18 +513,20 @@ export function MapDemo() {
             )}
           </div>
 
-          {/* Event Log */}
-          <div className="card">
-            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
-              <h2 className="text-sm font-medium text-gray-700">Event Log</h2>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
-              {eventLog.length === 0 ? (
-                <div className="p-4 text-sm text-gray-500 text-center">
-                  Interact with the map to see events here
-                </div>
-              ) : (
-                eventLog.map((event) => (
+          {/* Event Log - Collapsible */}
+          {eventLog.length > 0 && (
+            <div className="card">
+              <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                <h2 className="text-sm font-medium text-gray-700">Event Log</h2>
+                <button
+                  onClick={() => setEventLog([])}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                {eventLog.map((event) => (
                   <div key={event.id} className="px-4 py-2 flex items-center gap-3">
                     <span className="text-xs text-gray-400 w-20 flex-shrink-0">
                       {event.timestamp.toLocaleTimeString()}
@@ -483,24 +536,30 @@ export function MapDemo() {
                     </span>
                     <span className="text-sm text-gray-700 truncate">{event.data}</span>
                   </div>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Code Example */}
+          {/* Code Example - Simplified */}
           <div className="card">
-            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200">
-              <h2 className="text-sm font-medium text-gray-700">Code</h2>
+            <div className="bg-gray-100 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-sm font-medium text-gray-700">Example Code</h2>
+              <Link
+                to="/docs/components/map/map"
+                className="text-xs text-primary-600 hover:text-primary-700"
+              >
+                View Full Docs →
+              </Link>
             </div>
             <div className="bg-gray-900 text-gray-100 p-4 overflow-x-auto">
               <pre className="text-xs">
-                <code>{`import { Map, useMapInstance, SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG, WEATHER_RADAR_OVERLAY_CONFIG, DEFAULT_LAYERS } from '@acreblitz/react-components';
+                <code>{`import { Map, useMapInstance, DEFAULT_LAYERS } from '@acreblitz/react-components';
 import '@acreblitz/react-components/styles.css';
 
 function MyMap() {
   const mapRef = useRef(null);
-  const { flyTo, exportGeoJSON } = useMapInstance({ mapRef });
+  const { flyTo } = useMapInstance({ mapRef });
 
   return (
     <Map
@@ -508,47 +567,11 @@ function MyMap() {
       center={[${center[0]}, ${center[1]}]}
       zoom={${zoom}}
       height="${height}"
-      units={{ distance: 'imperial', area: 'acres' }}
-      showLayerControl={${showLayerControl}}
-      showZoomControl={${showZoomControl}}
-      showScaleControl={${showScaleControl}}
+      drawing={{ enabled: true }}
+      measure={{ enabled: true }}
       layers={{
-        baseLayers: [DEFAULT_LAYERS.esriWorldImagery, DEFAULT_LAYERS.openStreetMap],
-        overlays: [WEATHER_RADAR_OVERLAY_CONFIG],
+        baseLayers: [DEFAULT_LAYERS.esriWorldImagery],
         defaultBaseLayer: 'esri-satellite',
-        defaultOverlays: ${showWeatherRadar ? "['weather-radar-nexrad']" : '[]'},
-      }}${drawingEnabled ? `
-      drawing={{
-        enabled: true,
-        draw: {
-          polygon: ${drawPolygon},
-          rectangle: ${drawRectangle},
-          polyline: ${drawPolyline},
-          circle: ${drawCircle},
-          marker: ${drawMarker},
-        },
-      }}` : ''}${measureEnabled ? `
-      measure={{ enabled: true }}` : ''}${dataOverlaysEnabled ? `
-      dataOverlays={{
-        enabled: true,
-        showPanel: true,
-        panelConfig: {
-          position: 'topright',
-          title: 'Data Layers',
-        },
-        overlays: [SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG],
-        defaultVisibility: {
-          'ssurgo-soil': ${showSoilLayer},
-          '3dhp-hydro': ${showHydroLayer},
-        },
-      }}` : ''}
-      eventHandlers={{
-        onDrawCreated: (e) => console.log('Created:', e.layerType),
-        onClick: (e) => console.log('Clicked:', e.latlng),${dataOverlaysEnabled ? `
-        onSoilFeatureClick: (e) => console.log('Soil:', e.feature.properties),
-        onSoilFeatureSelect: (e) => console.log('Selected soil:', e.selectedFeatures),
-        onHydroFeatureClick: (e) => console.log('Hydro:', e.feature.properties),
-        onHydroFeatureSelect: (e) => console.log('Selected hydro:', e.selectedFeatures),` : ''}
       }}
     />
   );

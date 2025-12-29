@@ -73,6 +73,7 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
     units,
     drawing,
     measure,
+    clickForecast,
     // TODO: Implement gesture handling with leaflet-gesture-handling
     mobile: _mobile = { gestureHandling: true },
     eventHandlers,
@@ -273,10 +274,11 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
       {showScaleControl && <ScaleControl position="bottomleft" />}
       {showAttributionControl && <AttributionControl position="bottomright" />}
 
-      {/* Drawing and Measurement Controls */}
+      {/* Drawing, Measurement, and Forecast Controls */}
       <MapControls
         drawing={drawing}
         measure={measure}
+        clickForecast={clickForecast}
         units={units}
         eventHandlers={eventHandlers}
         drawnItemsRef={drawnItemsRef}

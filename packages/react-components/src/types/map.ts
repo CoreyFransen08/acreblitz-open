@@ -21,6 +21,10 @@ import type {
   HydroFeatureSelectEvent,
   OverlayVisibilityChangeEvent,
 } from './dataOverlay';
+import type {
+  ClickForecastOptions,
+  DWMLForecastData,
+} from './clickForecast';
 
 // Re-export LeafletMap type for convenience
 export type { Map as LeafletMap } from 'leaflet';
@@ -249,6 +253,12 @@ export interface MapEventHandlers {
   onHydroFeatureSelect?: (event: HydroFeatureSelectEvent) => void;
   /** Fired when any data overlay visibility changes */
   onDataOverlayVisibilityChange?: (event: OverlayVisibilityChangeEvent) => void;
+  /** Fired when click forecast data is fetched */
+  onClickForecastFetched?: (data: DWMLForecastData) => void;
+  /** Fired when click forecast mode is toggled */
+  onClickForecastModeChange?: (enabled: boolean) => void;
+  /** Fired when an error occurs */
+  onError?: (error: Error) => void;
 }
 
 // ============================================
@@ -322,6 +332,9 @@ export interface MapProps {
 
   /** Data overlay configuration (soil, hydro, etc.) */
   dataOverlays?: DataOverlayProps;
+
+  /** Click-to-forecast configuration */
+  clickForecast?: ClickForecastOptions;
 }
 
 // ============================================
@@ -372,6 +385,7 @@ export interface UseMapInstanceResult {
 export interface MapControlsProps {
   drawing?: DrawingOptions;
   measure?: MeasureOptions;
+  clickForecast?: ClickForecastOptions;
   units?: MapUnits;
   eventHandlers?: MapEventHandlers;
   drawnItemsRef: React.MutableRefObject<FeatureGroup | null>;

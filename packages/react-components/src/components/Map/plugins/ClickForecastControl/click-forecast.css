@@ -1,0 +1,318 @@
+/**
+ * Click-to-Forecast Control Styles
+ */
+
+/* ============================================
+   Toggle Button Control
+   ============================================ */
+
+.leaflet-control-click-forecast {
+  background-color: #ffffff;
+}
+
+.leaflet-click-forecast-toggle {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23374151" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px 18px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.leaflet-click-forecast-toggle:hover {
+  background-color: #f3f4f6;
+}
+
+.leaflet-click-forecast-toggle.active {
+  background-color: #dbeafe;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>');
+}
+
+/* Active mode cursor */
+.leaflet-click-forecast-active {
+  cursor: crosshair !important;
+}
+
+/* ============================================
+   Popup Styles
+   ============================================ */
+
+.leaflet-click-forecast-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-click-forecast-popup .leaflet-popup-content {
+  margin: 0;
+  width: 100% !important;
+}
+
+.leaflet-click-forecast-popup .leaflet-popup-tip {
+  background: white;
+}
+
+/* ============================================
+   Popup Content
+   ============================================ */
+
+.forecast-popup-content {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #374151;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+/* Header */
+.forecast-popup-header {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+}
+
+.forecast-popup-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.forecast-popup-subtitle {
+  display: block;
+  font-size: 11px;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.forecast-popup-coords {
+  display: block;
+  font-size: 10px;
+  opacity: 0.75;
+  margin-top: 4px;
+  font-family: monospace;
+}
+
+/* Summary Grid */
+.forecast-popup-summary {
+  padding: 12px 16px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.forecast-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.forecast-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.forecast-summary-temp {
+  grid-column: span 1;
+}
+
+.forecast-summary-accumulation {
+  background-color: #eff6ff;
+  padding: 6px 4px;
+  border-radius: 6px;
+  margin: -4px 0;
+}
+
+.forecast-summary-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.forecast-summary-rain {
+  color: #2563eb;
+}
+
+.forecast-summary-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Hourly Section */
+.forecast-popup-hourly {
+  padding: 8px 0;
+}
+
+.forecast-popup-day {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.forecast-popup-day:last-child {
+  border-bottom: none;
+}
+
+.forecast-popup-day-header {
+  padding: 8px 16px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  background-color: #f3f4f6;
+  position: sticky;
+  top: 0;
+}
+
+.forecast-popup-hours {
+  padding: 4px 0;
+}
+
+.forecast-hourly-row {
+  display: grid;
+  grid-template-columns: 50px 45px 45px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  font-size: 12px;
+}
+
+.forecast-hourly-row:hover {
+  background-color: #f9fafb;
+}
+
+.forecast-hourly-time {
+  color: #6b7280;
+}
+
+.forecast-hourly-temp {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.forecast-hourly-precip {
+  color: #3b82f6;
+}
+
+.forecast-hourly-wind {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+/* Footer */
+.forecast-popup-footer {
+  padding: 8px 16px;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  font-size: 10px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+
+.forecast-popup-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 12px;
+  color: #6b7280;
+}
+
+.forecast-popup-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: forecast-spin 0.8s linear infinite;
+}
+
+@keyframes forecast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+
+.forecast-popup-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.forecast-popup-error-icon {
+  width: 32px;
+  height: 32px;
+  color: #ef4444;
+  margin-bottom: 8px;
+}
+
+.forecast-popup-error-title {
+  font-weight: 500;
+  color: #ef4444;
+  margin-bottom: 4px;
+}
+
+.forecast-popup-error-message {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* ============================================
+   Empty State
+   ============================================ */
+
+.forecast-popup-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: #9ca3af;
+}
+
+/* ============================================
+   Mobile Responsive
+   ============================================ */
+
+@media (max-width: 768px) {
+  .leaflet-click-forecast-toggle {
+    width: 44px !important;
+    height: 44px !important;
+    background-size: 22px 22px;
+  }
+
+  .forecast-popup-content {
+    font-size: 14px;
+  }
+
+  .forecast-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .forecast-summary-accumulation {
+    grid-column: span 1;
+  }
+
+  .forecast-hourly-row {
+    grid-template-columns: 45px 40px 40px 1fr;
+    gap: 4px;
+  }
+}

@@ -15,10 +15,12 @@ export {
   WeatherRadarLayer,
   RadarAnimationControls,
   useRadarAnimation,
+  // Click Forecast component
+  ClickForecastControl,
 } from './components/Map';
 
 // Hooks
-export { useWeather, useMapInstance } from './hooks';
+export { useWeather, useMapInstance, useMapClickForecast } from './hooks';
 
 // Types
 export type {
@@ -98,6 +100,14 @@ export type {
   UseRadarAnimationResult,
   WeatherRadarLayerProps,
   RadarAnimationControlsProps,
+  // Click Forecast types
+  DWMLLocation,
+  DWMLHourlyData,
+  DWMLForecastData,
+  UseClickForecastOptions,
+  UseClickForecastResult,
+  ClickForecastOptions,
+  ClickForecastControlProps,
 } from './types';
 
 // Weather Radar type guard
@@ -125,6 +135,13 @@ export {
   getDefaultLayer,
   // Weather Radar
   WEATHER_RADAR_OVERLAY_CONFIG,
+  // Click Forecast utilities
+  fetchDWMLForecast,
+  parseDWMLResponse,
+  degreesToCompassDirection,
+  dwmlFahrenheitToCelsius,
+  mphToKmh,
+  inchesToMm,
 } from './utils';
 
 // Data Overlay utilities - Soil

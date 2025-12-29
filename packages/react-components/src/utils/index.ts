@@ -18,3 +18,12 @@ export {
   getDefaultLayer,
   WEATHER_RADAR_OVERLAY_CONFIG,
 } from './mapLayers';
+
+export {
+  fetchDWMLForecast,
+  parseDWMLResponse,
+  degreesToCompassDirection,
+  dwmlFahrenheitToCelsius,
+  mphToKmh,
+  inchesToMm,
+} from './dwmlParser';

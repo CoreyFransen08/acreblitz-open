@@ -14,8 +14,20 @@ npm install @acreblitz/react-components
 
 **Available Components:**
 - `Weather` - Display current conditions and hourly forecast using the National Weather Service API
+- `Map` - Interactive Leaflet-based map with satellite imagery, drawing tools, measurement, and data overlays
 
 [View Documentation](./packages/react-components/README.md)
+
+## Demo App
+
+Try out the components in an interactive demo:
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/fork/github/CoreyFransen08/acreblitz-open/tree/main/demo_app)
+
+The demo app showcases all available components including:
+- Interactive map with drawing and measurement tools
+- Weather component with live data
+- Data overlays (SSURGO soil data, 3DHP hydro features, weather radar)
 
 ## API Gateway
 

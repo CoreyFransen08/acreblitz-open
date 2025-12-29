@@ -94,3 +94,14 @@ export type {
 } from './weatherRadar';
 
 export { isAnimatedTileLayer } from './weatherRadar';
+
+export type {
+  // Click Forecast types
+  DWMLLocation,
+  DWMLHourlyData,
+  DWMLForecastData,
+  UseClickForecastOptions,
+  UseClickForecastResult,
+  ClickForecastOptions,
+  ClickForecastControlProps,
+} from './clickForecast';

@@ -4,16 +4,18 @@ import { EditControl } from 'react-leaflet-draw';
 import L from 'leaflet';
 import type { MapControlsProps, DrawCreatedEvent, DrawEditedEvent, DrawDeletedEvent } from '../../types/map';
 import { MeasureControl } from './plugins/MeasureControl';
+import { ClickForecastControl } from './plugins/ClickForecastControl';
 
 // Import leaflet-draw styles
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 /**
- * MapControls component handles drawing and measurement controls
+ * MapControls component handles drawing, measurement, and click forecast controls
  */
 export function MapControls({
   drawing,
   measure,
+  clickForecast,
   units,
   eventHandlers,
   drawnItemsRef,
@@ -208,6 +210,21 @@ export function MapControls({
           color={measure.color || '#FF0080'}
           distanceUnit={units?.distance || 'metric'}
           areaUnit={units?.area || 'metric'}
+        />
+      )}
+
+      {/* Click Forecast Control */}
+      {clickForecast?.enabled && (
+        <ClickForecastControl
+          position={clickForecast.position || 'topright'}
+          forecastHours={clickForecast.forecastHours || 48}
+          units={clickForecast.units || (units?.distance === 'imperial' ? 'imperial' : 'metric')}
+          popupMaxWidth={clickForecast.popupMaxWidth}
+          popupMaxHeight={clickForecast.popupMaxHeight}
+          autoPan={clickForecast.autoPan}
+          onForecastFetched={eventHandlers?.onClickForecastFetched}
+          onModeChange={eventHandlers?.onClickForecastModeChange}
+          onError={eventHandlers?.onError}
         />
       )}
     </>

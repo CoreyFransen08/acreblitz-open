@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Weather, WeatherSkeleton } from '@acreblitz/react-components';
 import type { WeatherData } from '@acreblitz/react-components';
 
@@ -30,18 +31,28 @@ export function WeatherDemo() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="section-title">Weather Component</h1>
-        <p className="section-description">
-          Display current weather conditions and hourly forecast for US locations
-          using the National Weather Service API.
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="section-title">Weather Component</h1>
+            <p className="section-description">
+              Display current weather conditions and hourly forecast for US locations
+              using the National Weather Service API.
+            </p>
+          </div>
+          <Link
+            to="/docs/components/weather"
+            className="btn-outline whitespace-nowrap"
+          >
+            View Documentation
+          </Link>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Controls Panel */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="card p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="lg:col-span-1 space-y-4">
+          <div className="card p-4">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">
               Configuration
             </h2>
 
@@ -156,47 +167,10 @@ export function WeatherDemo() {
             </div>
           </div>
 
-          {/* Last Data Info */}
-          {lastData && (
-            <div className="card p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Last Loaded Data
-              </h2>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Location:</dt>
-                  <dd className="text-gray-900 font-medium">
-                    {lastData.location.city}, {lastData.location.state}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Grid ID:</dt>
-                  <dd className="text-gray-900 font-medium">
-                    {lastData.location.gridId}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Updated:</dt>
-                  <dd className="text-gray-900 font-medium">
-                    {new Date(lastData.updated).toLocaleTimeString()}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500">Forecast Periods:</dt>
-                  <dd className="text-gray-900 font-medium">
-                    {lastData.hourlyForecast.length}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          )}
 
           {/* Skeleton Demo */}
-          <div className="card p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Loading Skeleton
-            </h2>
-            <label className="flex items-center gap-3 cursor-pointer mb-4">
+          <div className="card p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showSkeleton}
@@ -205,7 +179,7 @@ export function WeatherDemo() {
               />
               <span className="text-sm text-gray-700">Show WeatherSkeleton</span>
             </label>
-            {showSkeleton && <WeatherSkeleton />}
+            {showSkeleton && <div className="mt-4"><WeatherSkeleton /></div>}
           </div>
         </div>
 
@@ -229,10 +203,16 @@ export function WeatherDemo() {
             </div>
           </div>
 
-          {/* Code Example */}
+          {/* Code Example - Simplified */}
           <div className="card mt-6">
-            <div className="bg-gray-100 px-6 py-3 border-b border-gray-200">
-              <h2 className="text-sm font-medium text-gray-700">Code</h2>
+            <div className="bg-gray-100 px-6 py-3 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-sm font-medium text-gray-700">Example Code</h2>
+              <Link
+                to="/docs/components/weather"
+                className="text-xs text-primary-600 hover:text-primary-700"
+              >
+                View Full Docs →
+              </Link>
             </div>
             <div className="bg-gray-900 text-gray-100 p-6 overflow-x-auto">
               <pre className="text-sm">
@@ -242,11 +222,7 @@ export function WeatherDemo() {
   latitude={${latitude}}
   longitude={${longitude}}
   units="${units}"
-  compact={${compact}}
-  showRefreshButton={${showRefresh}}
   forecastDays={${forecastDays}}
-  onDataLoad={(data) => console.log('Loaded:', data)}
-  onError={(error) => console.error('Error:', error)}
 />`}</code>
               </pre>
             </div>

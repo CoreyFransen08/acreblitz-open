@@ -4,6 +4,7 @@ const navItems = [
   { to: '/', label: 'Home' },
   { to: '/weather', label: 'Weather' },
   { to: '/map', label: 'Map' },
+  { to: '/docs', label: 'Docs' },
 ];
 
 export function Layout() {
@@ -15,21 +16,11 @@ export function Layout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                  />
-                </svg>
-              </div>
+              <img
+                src="/acreblitz_favicon.png"
+                alt="AcreBlitz"
+                className="w-8 h-8"
+              />
               <span className="font-bold text-xl text-gray-900">
                 AcreBlitz Components
               </span>
@@ -57,7 +48,7 @@ export function Layout() {
 
             {/* GitHub Link */}
             <a
-              href="https://github.com/acreblitz/acreblitz"
+              href="https://github.com/CoreyFransen08/acreblitz-open/tree/main"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-700 transition-colors"
