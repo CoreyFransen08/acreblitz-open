@@ -5,12 +5,14 @@
   "description": "AcreBlitz Open Source Components and API Gateway",
   "workspaces": [
     "packages/*",
-    "demo_app"
+    "demo_app",
+    "map-demo"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
     "dev": "npm run dev --workspaces --if-present",
     "dev:demo": "npm run dev --workspace=@acreblitz/demo-app",
+    "dev:map": "npm run dev --workspace=@acreblitz/map-demo",
     "lint": "npm run lint --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present"
   },

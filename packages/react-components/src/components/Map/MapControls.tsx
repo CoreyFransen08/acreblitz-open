@@ -23,6 +23,39 @@ export function MapControls({
 }: MapControlsProps) {
   const map = useMap();
 
+  // Hide draw actions on mobile to prevent duplicate icon issue
+  useEffect(() => {
+    const hideDrawActions = () => {
+      const actions = document.querySelectorAll('.leaflet-draw-actions');
+      actions.forEach((action) => {
+        const el = action as HTMLElement;
+        // Only hide if not actively drawing (no enabled button)
+        const parent = el.closest('li');
+        if (parent && !parent.classList.contains('leaflet-draw-toolbar-button-enabled')) {
+          el.style.display = 'none';
+        }
+      });
+    };
+
+    // Run on mount and when draw tools change
+    hideDrawActions();
+
+    // Also run after a short delay to catch any late rendering
+    const timer = setTimeout(hideDrawActions, 100);
+
+    // Listen for draw events to show/hide actions appropriately
+    map.on('draw:drawstart', () => {
+      // Allow actions to show when actively drawing
+    });
+
+    map.on('draw:drawstop draw:editstop draw:deletestop', hideDrawActions);
+
+    return () => {
+      clearTimeout(timer);
+      map.off('draw:drawstop draw:editstop draw:deletestop', hideDrawActions);
+    };
+  }, [map]);
+
   // Load initial GeoJSON if provided
   useEffect(() => {
     if (initialGeoJSON && drawnItemsRef.current) {

@@ -300,7 +300,7 @@
    ============================================ */
 
 @media (max-width: 768px) {
-  /* Larger touch targets for controls */
+  /* Larger touch targets for controls (44px min - Apple HIG) */
   .acb-map-container .leaflet-control-zoom a {
     width: 44px !important;
     height: 44px !important;
@@ -311,6 +311,8 @@
   .acb-map-container .leaflet-draw-toolbar a {
     width: 44px !important;
     height: 44px !important;
+    background-size: 24px 24px !important;
+    background-position: center !important;
   }
 
   .acb-map-container .leaflet-control-layers-toggle {
@@ -346,6 +348,71 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* ---- Drawing Tools Mobile Fixes ---- */
+
+  /* Hide draw actions by default on mobile - prevents extra icons issue */
+  .acb-map-container .leaflet-draw-actions {
+    display: none !important;
+  }
+
+  /* Show actions only when tool is actively selected/enabled */
+  .acb-map-container .leaflet-draw-toolbar li.leaflet-draw-toolbar-button-enabled .leaflet-draw-actions {
+    display: block !important;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 4px;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+  }
+
+  /* Make action buttons appear as a proper dropdown */
+  .acb-map-container .leaflet-draw-actions li {
+    display: block;
+    width: 100%;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .acb-map-container .leaflet-draw-actions li:last-child {
+    border-bottom: none;
+  }
+
+  .acb-map-container .leaflet-draw-actions a {
+    display: block;
+    padding: 12px 16px;
+    min-width: 100px;
+    white-space: nowrap;
+    font-size: 14px;
+    color: #374151;
+    text-decoration: none;
+  }
+
+  .acb-map-container .leaflet-draw-actions a:hover {
+    background-color: #f3f4f6;
+  }
+
+  /* Add spacing between control groups */
+  .acb-map-container .leaflet-left .leaflet-control {
+    margin-left: 10px;
+    margin-bottom: 10px;
+  }
+
+  .acb-map-container .leaflet-right .leaflet-control {
+    margin-right: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* Add gap between draw toolbar sections */
+  .acb-map-container .leaflet-draw-section {
+    margin-bottom: 8px;
+  }
+
+  .acb-map-container .leaflet-draw-section:last-child {
+    margin-bottom: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -361,6 +428,24 @@
   /* Stack draw toolbar vertically if needed */
   .acb-map-container .leaflet-draw-section {
     margin-top: 8px;
+  }
+
+  /* Smaller controls to save space */
+  .acb-map-container .leaflet-control-zoom a,
+  .acb-map-container .leaflet-draw-toolbar a,
+  .acb-map-container .leaflet-control-measure a {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Draw actions dropdown adjustments */
+  .acb-map-container .leaflet-draw-toolbar li.leaflet-draw-toolbar-button-enabled .leaflet-draw-actions {
+    min-width: 90px;
+  }
+
+  .acb-map-container .leaflet-draw-actions a {
+    padding: 10px 12px;
+    font-size: 13px;
   }
 }
 
@@ -379,6 +464,15 @@
   .acb-map-container .leaflet-draw-toolbar a:active,
   .acb-map-container .leaflet-control-layers-toggle:active {
     background-color: #e5e7eb;
+  }
+
+  /* Hide draw actions on touch devices until tool is enabled */
+  .acb-map-container .leaflet-draw-actions {
+    display: none !important;
+  }
+
+  .acb-map-container .leaflet-draw-toolbar li.leaflet-draw-toolbar-button-enabled .leaflet-draw-actions {
+    display: block !important;
   }
 }
 

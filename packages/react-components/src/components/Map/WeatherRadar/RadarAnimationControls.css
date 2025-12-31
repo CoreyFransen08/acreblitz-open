@@ -238,37 +238,92 @@
 
 @media (max-width: 768px) {
   .acb-radar-controls {
-    max-width: calc(100vw - 80px);
+    min-width: 200px;
+    max-width: calc(100vw - 100px);
   }
 
-  .acb-radar-controls--bottomleft,
+  /* Move bottom positions up to avoid overlap with scale/attribution and overlay panel */
+  .acb-radar-controls--bottomleft {
+    bottom: 100px;
+    left: 10px;
+  }
+
   .acb-radar-controls--bottomright {
-    bottom: 50px;
+    bottom: 100px;
+    right: 10px;
   }
 
+  /* Adjust top positions to account for other controls */
+  .acb-radar-controls--topleft {
+    top: 200px; /* Below zoom + drawing tools */
+  }
+
+  .acb-radar-controls--topright {
+    top: 130px; /* Below layer control + click forecast */
+  }
+
+  /* Larger touch target for play button */
   .acb-radar-controls__play-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
 
   .acb-radar-controls__play-btn svg {
     width: 16px;
     height: 16px;
   }
+
+  /* Compact header on mobile */
+  .acb-radar-controls__header {
+    padding: 6px 10px;
+  }
+
+  .acb-radar-controls__content {
+    padding: 8px 10px;
+  }
 }
 
 @media (max-width: 480px) {
   .acb-radar-controls {
-    left: 10px;
-    right: 10px;
-    max-width: none;
+    min-width: 160px;
+    max-width: calc(100vw - 60px);
   }
 
   .acb-radar-controls--topright,
   .acb-radar-controls--bottomright {
     right: 10px;
     left: auto;
-    max-width: calc(100vw - 60px);
+  }
+
+  .acb-radar-controls--topleft,
+  .acb-radar-controls--bottomleft {
+    left: 10px;
+    right: auto;
+  }
+
+  /* Hide time labels on very small screens to save space */
+  .acb-radar-controls__time-label {
+    display: none;
+  }
+
+  /* Smaller text elements */
+  .acb-radar-controls__title {
+    font-size: 12px;
+  }
+
+  .acb-radar-controls__timestamp {
+    font-size: 11px;
+  }
+
+  /* Smaller play button */
+  .acb-radar-controls__play-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .acb-radar-controls__play-btn svg {
+    width: 14px;
+    height: 14px;
   }
 }
 
