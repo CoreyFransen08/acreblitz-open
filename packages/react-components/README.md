@@ -10,7 +10,15 @@ npm install @acreblitz/react-components
 
 ## Try It
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/CoreyFransen08/acreblitz-open/tree/main/opensrc/demo_app)
+**Full Demo App:**
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/CoreyFransen08/acreblitz-open/tree/main/demo_app)
+
+**Map Component Demo:**
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/CoreyFransen08/acreblitz-open/tree/main/map-demo)
+
+
 
 ## Components
 

@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure the app takes full height */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
