@@ -60,11 +60,7 @@ export function MapDemo() {
   // Click Forecast
   const [clickForecastEnabled, setClickForecastEnabled] = useState(true);
 
-  // Data Overlays
-  const [dataOverlaysEnabled, setDataOverlaysEnabled] = useState(true);
-  const [showSoilLayer, setShowSoilLayer] = useState(false);
-  const [showHydroLayer, setShowHydroLayer] = useState(false);
-  const [showWeatherRadar, setShowWeatherRadar] = useState(false);
+  // Data Overlays - track selections for event log
   const [selectedSoilFeatures, setSelectedSoilFeatures] = useState<string[]>([]);
   const [selectedHydroFeatures, setSelectedHydroFeatures] = useState<string[]>([]);
 
@@ -291,83 +287,6 @@ export function MapDemo() {
             </p>
           </div>
 
-          {/* Data Overlays */}
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">Data Overlays</h2>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={dataOverlaysEnabled}
-                  onChange={(e) => setDataOverlaysEnabled(e.target.checked)}
-                  className="rounded text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-xs text-gray-500">Enabled</span>
-              </label>
-            </div>
-            {dataOverlaysEnabled && (
-              <div className="space-y-3">
-                {/* Soil Layer */}
-                <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showSoilLayer}
-                      onChange={(e) => setShowSoilLayer(e.target.checked)}
-                      className="rounded text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm text-gray-700">SSURGO Soil Data</span>
-                  </label>
-                  <p className="text-xs text-gray-500 pl-6">
-                    Zoom to level 12+ to see soil polygons. Click to select.
-                  </p>
-                  {selectedSoilFeatures.length > 0 && (
-                    <div className="mt-2 p-2 bg-amber-50 rounded text-xs text-amber-700">
-                      {selectedSoilFeatures.length} soil feature(s) selected
-                    </div>
-                  )}
-                </div>
-
-                {/* Hydro Layer */}
-                <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showHydroLayer}
-                      onChange={(e) => setShowHydroLayer(e.target.checked)}
-                      className="rounded text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm text-gray-700">3DHP Hydro Features</span>
-                  </label>
-                  <p className="text-xs text-gray-500 pl-6">
-                    Zoom to level 14+ to see streams, rivers, and lakes.
-                  </p>
-                  {selectedHydroFeatures.length > 0 && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
-                      {selectedHydroFeatures.length} hydro feature(s) selected
-                    </div>
-                  )}
-                </div>
-
-                {/* Weather Radar */}
-                <div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showWeatherRadar}
-                      onChange={(e) => setShowWeatherRadar(e.target.checked)}
-                      className="rounded text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm text-gray-700">Weather Radar</span>
-                  </label>
-                  <p className="text-xs text-gray-500 pl-6">
-                    NEXRAD radar with animation. Zoom out for better coverage.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Actions */}
           <div className="card p-4">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Actions</h2>
@@ -439,7 +358,7 @@ export function MapDemo() {
                   ],
                   overlays: [WEATHER_RADAR_OVERLAY_CONFIG],
                   defaultBaseLayer: 'esri-satellite',
-                  defaultOverlays: showWeatherRadar ? ['weather-radar-nexrad'] : [],
+                  defaultOverlays: [],
                 }}
                 drawing={
                   drawingEnabled
@@ -467,23 +386,20 @@ export function MapDemo() {
                       }
                     : undefined
                 }
-                dataOverlays={
-                  dataOverlaysEnabled
-                    ? {
-                        enabled: true,
-                        showPanel: true,
-                        panelConfig: {
-                          position: 'bottomright',
-                          title: 'Data Layers',
-                        },
-                        overlays: [SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG],
-                        defaultVisibility: {
-                          'ssurgo-soil': showSoilLayer,
-                          '3dhp-hydro': showHydroLayer,
-                        },
-                      }
-                    : undefined
-                }
+                dataOverlays={{
+                  enabled: true,
+                  showPanel: true,
+                  panelConfig: {
+                    position: 'bottomright',
+                    title: 'Overlays',
+                    collapsed: true,
+                  },
+                  overlays: [SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG],
+                  defaultVisibility: {
+                    'ssurgo-soil': false,
+                    '3dhp-hydro': false,
+                  },
+                }}
                 eventHandlers={{
                   onReady: () => addEvent('Ready', 'Map initialized'),
                   onClick: (e: MapClickEvent) =>

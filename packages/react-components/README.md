@@ -16,7 +16,7 @@ npm install @acreblitz/react-components
 
 ### Map
 
-Interactive Leaflet-based map with satellite imagery, drawing tools, measurement, and data overlays.
+Interactive Leaflet-based map with satellite imagery, drawing tools, measurement, and data overlays. Includes support for SSURGO soil data and USGS 3DHP hydrographic features with interactive selection, tooltips, and custom styling.
 
 ```tsx
 import { Map, DEFAULT_LAYERS } from '@acreblitz/react-components';
@@ -155,6 +155,103 @@ function MyMap() {
   );
 }
 ```
+
+#### Data Overlays
+
+The Map component supports interactive data overlays for displaying geographic features like soil polygons and hydrographic features. Overlays include:
+
+- **SSURGO Soil Data**: USDA NRCS soil polygons with drainage class, farmland classification, and hydric rating (min zoom: 12)
+- **3DHP Hydro Features**: USGS streams, rivers, lakes, and drainage areas (min zoom: 14)
+
+Features include click-to-select, hover tooltips, custom styling, and event callbacks.
+
+**Basic Example:**
+
+```tsx
+import { Map, SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG } from '@acreblitz/react-components';
+
+function MyMap() {
+  return (
+    <Map
+      center={[39.7456, -97.0892]}
+      zoom={14}
+      height="500px"
+      dataOverlays={{
+        enabled: true,
+        showPanel: true,
+        overlays: [SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG],
+        defaultVisibility: {
+          'ssurgo-soil': true,
+          '3dhp-hydro': true,
+        },
+      }}
+      eventHandlers={{
+        onSoilFeatureClick: (e) => {
+          console.log('Soil:', e.feature.properties.muname);
+          console.log('Drainage:', e.feature.properties.drclassdcd);
+        },
+        onHydroFeatureClick: (e) => {
+          console.log('Hydro:', e.feature.properties.gnis_name);
+          console.log('Type:', e.feature.featureType);
+        },
+        onSoilFeatureSelect: (e) => {
+          console.log('Selected soil features:', e.selectedFeatures);
+        },
+      }}
+    />
+  );
+}
+```
+
+**Using the Data Overlay Hook:**
+
+```tsx
+import { Map, useDataOverlay, SSURGO_OVERLAY_CONFIG } from '@acreblitz/react-components';
+
+function SoilInfo() {
+  const { selection, visibility, toggleOverlay, clearSelection } = useDataOverlay();
+  const selectedSoil = selection.soilFeatures;
+
+  return (
+    <div>
+      <p>{selectedSoil.length} soil features selected</p>
+      <button onClick={() => toggleOverlay('ssurgo-soil')}>
+        {visibility['ssurgo-soil'] ? 'Hide' : 'Show'} Soil Layer
+      </button>
+      {selectedSoil.map((feature) => (
+        <div key={feature.id}>
+          <strong>{feature.properties.muname}</strong>
+          <p>Drainage: {feature.properties.drclassdcd}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Data Overlay Configuration:**
+
+```tsx
+dataOverlays={{
+  enabled: true,
+  showPanel: true,  // Show control panel for toggling layers
+  overlays: [SSURGO_OVERLAY_CONFIG, HYDRO_3DHP_OVERLAY_CONFIG],
+  defaultVisibility: {
+    'ssurgo-soil': false,  // Hidden by default
+    '3dhp-hydro': true,    // Visible by default
+  },
+  panelConfig: {
+    position: 'bottomright',
+    title: 'Overlays',
+    collapsed: true,
+  },
+}}
+```
+
+For detailed documentation on data overlays, see:
+- [Data Overlays Documentation](./docs/components/map/data-overlays/index.md)
+- [SSURGO Soil Overlay](./docs/components/map/data-overlays/soil-overlay.md)
+- [3DHP Hydro Overlay](./docs/components/map/data-overlays/hydro-overlay.md)
 
 ### Weather
 
