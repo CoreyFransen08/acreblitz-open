@@ -94,6 +94,7 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
   const mapRef = useRef<LeafletMap | null>(null);
   const drawnItemsRef = useRef<FeatureGroup | null>(null);
 
+
   // Expose map instance via ref
   useImperativeHandle(ref, () => mapInstance!, [mapInstance]);
 

@@ -1,0 +1,79 @@
+{
+  "name": "@acreblitz/platform-integrations",
+  "version": "0.1.0",
+  "description": "Platform integrations for John Deere Operations Center and other agricultural data providers",
+  "license": "MIT",
+  "author": "AcreBlitz",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CoreyFransen08/acreblitz-open.git",
+    "directory": "opensrc/packages/platform-integrations"
+  },
+  "keywords": [
+    "john-deere",
+    "operations-center",
+    "agriculture",
+    "oauth",
+    "api-client",
+    "acreblitz",
+    "drizzle-orm"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./db": {
+      "import": {
+        "types": "./dist/db/index.d.ts",
+        "default": "./dist/db/index.js"
+      },
+      "require": {
+        "types": "./dist/db/index.d.cts",
+        "default": "./dist/db/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "drizzle-orm": ">=0.30.0"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.38.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.2",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
