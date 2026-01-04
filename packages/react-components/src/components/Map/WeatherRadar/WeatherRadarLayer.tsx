@@ -6,8 +6,8 @@
  */
 
 import { useEffect, useRef, useMemo } from 'react';
-import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useNativeMap } from '../MapContext';
 import { useRadarAnimation } from './useRadarAnimation';
 import { RadarAnimationControls } from './RadarAnimationControls';
 import type { WeatherRadarLayerProps } from '../../../types/weatherRadar';
@@ -28,7 +28,7 @@ export function WeatherRadarLayer({
   onVisibilityChange,
   onFrameChange,
 }: WeatherRadarLayerProps) {
-  const map = useMap();
+  const map = useNativeMap();
 
   // Create custom pane for radar (if not already exists)
   useEffect(() => {

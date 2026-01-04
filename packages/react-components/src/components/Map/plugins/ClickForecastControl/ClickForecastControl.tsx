@@ -6,8 +6,8 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useNativeMap } from '../../MapContext';
 import { renderToString } from 'react-dom/server';
 import type { ClickForecastControlProps } from '../../../../types/clickForecast';
 import { useMapClickForecast } from '../../../../hooks/useMapClickForecast';
@@ -41,7 +41,7 @@ export function ClickForecastControl({
   onError,
   onModeChange,
 }: ClickForecastControlProps) {
-  const map = useMap();
+  const map = useNativeMap();
   const [isActive, setIsActive] = useState(false);
   const popupRef = useRef<L.Popup | null>(null);
   const controlRef = useRef<L.Control.ClickForecast | null>(null);

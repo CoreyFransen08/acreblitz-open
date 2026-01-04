@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useNativeMap } from '../../MapContext';
 import type { DistanceUnit, AreaUnit } from '../../../../types/map';
 
 // Import the Leaflet.Measure plugin (registers L.control.measure)
@@ -44,7 +44,7 @@ export function MeasureControl({
   distanceUnit = 'metric',
   areaUnit = 'metric',
 }: MeasureControlProps) {
-  const map = useMap();
+  const map = useNativeMap();
 
   useEffect(() => {
     const measureControl = L.control.measure({

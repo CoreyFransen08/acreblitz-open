@@ -47,12 +47,24 @@ Before we write code, let's understand what's happening:
 │             │◀────│    Login     │◀────│   Grants    │
 │ Gets tokens │     │    Page      │     │   Access    │
 └─────────────┘     └──────────────┘     └─────────────┘
+       │                                        │
+       │            ┌──────────────┐            │
+       │            │  Connections │◀───────────┘
+       │◀───────────│    Page      │   (if needed)
+       │            │ (Select Orgs)│
+       │            └──────────────┘
+       ▼
+ Store tokens &
+ organization IDs
 ```
 
 1. **User clicks "Connect"** → You redirect them to John Deere's login page
 2. **User logs in and approves** → John Deere redirects back to your app with a code
 3. **You exchange the code** → You get tokens (like keys to access their data)
-4. **You use the tokens** → Make API calls to get their farm data
+4. **Check for `connectionsUrl`** → If present, redirect user to select organizations
+5. **User selects organizations** → They return to your `/org-connected` endpoint
+6. **Store tokens AND organization IDs** → You need the org ID for API calls
+7. **Use the tokens** → Make API calls with the organization ID
 
 ---
 
@@ -115,15 +127,17 @@ After the user approves, John Deere redirects them back to your app:
 
 ```typescript
 // File: callback.ts
-import { JohnDeereOAuth } from '@acreblitz/platform-integrations';
+import { JohnDeereOAuth, JD_API_BASE_URLS } from '@acreblitz/platform-integrations';
 
 const oauth = new JohnDeereOAuth({
   clientId: process.env.JD_CLIENT_ID!,
   clientSecret: process.env.JD_CLIENT_SECRET!,
   redirectUri: process.env.REDIRECT_URI!,
+  applicationId: process.env.JD_APPLICATION_ID,  // Optional but recommended
+  apiBaseUrl: JD_API_BASE_URLS.PRODUCTION,       // Or SANDBOX for testing
 });
 
-export async function handleCallback(code: string, state: string) {
+export async function handleCallback(code: string, state: string, baseUrl: string) {
   // First, verify the state matches what we saved earlier
   // (Skip for now, but DO THIS in production!)
 
@@ -133,7 +147,7 @@ export async function handleCallback(code: string, state: string) {
   // result contains:
   // - accessToken: Use this for API calls (expires in 12 hours)
   // - refreshToken: Use this to get new access tokens (save this!)
-  // - organizations: List of farms the user has access to
+  // - organizations: List of orgs the user has access to (may be empty!)
   // - connectionsUrl: If not null, user needs to select which orgs to share
 
   // SAVE THE REFRESH TOKEN!
@@ -142,8 +156,18 @@ export async function handleCallback(code: string, state: string) {
 
   // Check if they need to do extra setup
   if (result.connectionsUrl) {
-    // Redirect them to complete organization selection
-    return { needsOrgSetup: true, url: result.connectionsUrl };
+    // IMPORTANT: Modify the redirect_uri in the connections URL!
+    // After org selection, JD will redirect back. We need it to go to a
+    // DIFFERENT endpoint than the OAuth callback (which expects a code).
+    const connectionsUrl = new URL(result.connectionsUrl);
+    connectionsUrl.searchParams.set('redirect_uri', `${baseUrl}/api/auth/org-connected`);
+
+    return { needsOrgSetup: true, url: connectionsUrl.toString() };
+  }
+
+  // Save organization IDs for later API calls
+  if (result.organizations.length > 0) {
+    await saveOrganizationIds(userId, result.organizations);
   }
 
   return { success: true, organizations: result.organizations };
@@ -155,6 +179,200 @@ export async function handleCallback(code: string, state: string) {
 - We exchange it for real tokens (like trading a ticket for a prize)
 - `refreshToken` is what you save - it lasts up to a year
 - `connectionsUrl` appears when users need to choose which farms to share
+- **Critical**: We modify the `redirect_uri` in the connections URL to point to a different endpoint (`/api/auth/org-connected`) because the org connection redirect does NOT include an authorization code
+
+### TokenExchangeResult Type
+
+Here's the exact TypeScript type returned by `exchangeCodeForTokens()`:
+
+```typescript
+interface TokenExchangeResult {
+  /** The access token for API calls (expires in ~12 hours) */
+  accessToken: string;
+  /** The refresh token for obtaining new access tokens (save this!) */
+  refreshToken: string;
+  /** Token type (usually "Bearer") */
+  tokenType: string;
+  /** Time in seconds until the access token expires */
+  expiresIn: number;
+  /** Granted scopes */
+  scope?: string;
+  /** List of organizations the user has access to */
+  organizations: OrganizationConnectionInfo[];
+  /**
+   * If any organization needs connection setup, this URL is provided.
+   * Redirect the user to this URL to complete org selection.
+   * Will be null if all orgs are already connected.
+   */
+  connectionsUrl: string | null;
+}
+
+interface OrganizationConnectionInfo {
+  /** Organization ID - USE THIS FOR API CALLS */
+  id: string;
+  /** Organization name (e.g., "Smith Family Farms") */
+  name: string;
+  /** Organization type (e.g., "customer", "dealer") */
+  type?: string;
+  /** Whether this organization needs the user to complete connection setup */
+  needsConnection: boolean;
+  /** The connections URL if needsConnection is true */
+  connectionsUrl?: string;
+}
+```
+
+**Example response:**
+```json
+{
+  "accessToken": "eyJhbGciOiJSUzI1NiIs...",
+  "refreshToken": "v1.MjU2OmFkNjg0OGNm...",
+  "tokenType": "Bearer",
+  "expiresIn": 43200,
+  "scope": "ag1 ag2 ag3 offline_access",
+  "organizations": [
+    {
+      "id": "123456",
+      "name": "Smith Family Farms",
+      "type": "customer",
+      "needsConnection": false
+    }
+  ],
+  "connectionsUrl": null
+}
+```
+
+---
+
+## Step 3b: Handle Organization Connection Return
+
+When users return from the organization connection page, they come back to your `org-connected` endpoint (NOT the OAuth callback). This endpoint doesn't receive a code - it just needs to check which organizations are now connected:
+
+```typescript
+// File: org-connected.ts
+import { JohnDeereOAuth, JD_API_BASE_URLS } from '@acreblitz/platform-integrations';
+
+export async function handleOrgConnected(userId: string, baseUrl: string) {
+  // Get the existing refresh token you saved during the initial callback
+  const refreshToken = await getRefreshTokenFromDatabase(userId);
+
+  if (!refreshToken) {
+    // User's session expired - they need to start over
+    throw new Error('Session expired. Please connect to John Deere again.');
+  }
+
+  const oauth = new JohnDeereOAuth({
+    clientId: process.env.JD_CLIENT_ID!,
+    clientSecret: process.env.JD_CLIENT_SECRET!,
+    // Use org-connected as redirect URI so if there are MORE pending orgs,
+    // the user will return here again after connecting them
+    redirectUri: `${baseUrl}/api/auth/org-connected`,
+    applicationId: process.env.JD_APPLICATION_ID,
+    apiBaseUrl: JD_API_BASE_URLS.PRODUCTION,
+  });
+
+  // Check which organizations are now connected
+  const result = await oauth.getConnectedOrganizations(refreshToken);
+
+  // result contains:
+  // - connectedOrganizations: Orgs that are fully connected
+  // - pendingOrganizations: Orgs that still need connection
+  // - connectionsUrl: If not null, there are still pending orgs
+  // - refreshToken: Save this - it may be a new token!
+
+  // Always update the refresh token (JD may issue a new one)
+  await saveRefreshTokenToDatabase(userId, result.refreshToken);
+
+  // Save connected organization IDs for API calls
+  if (result.connectedOrganizations.length > 0) {
+    await saveOrganizationIds(userId, result.connectedOrganizations);
+  }
+
+  // Check if there are still pending orgs
+  if (result.connectionsUrl) {
+    // Still have orgs to connect - redirect back to connections page
+    return { needsMoreOrgs: true, url: result.connectionsUrl };
+  }
+
+  return {
+    success: true,
+    organizations: result.connectedOrganizations
+  };
+}
+```
+
+**Why is this a separate endpoint?**
+- The OAuth callback (`/api/auth/callback`) expects an authorization `code` parameter
+- The org connection page redirects WITHOUT a code - it's just a redirect back to your app
+- If you use the same endpoint, you'll get errors about missing codes
+- Having a separate endpoint makes the flow clear and prevents confusion
+
+### ConnectedOrganizationsResult Type
+
+Here's the exact TypeScript type returned by `getConnectedOrganizations()`:
+
+```typescript
+interface ConnectedOrganizationsResult {
+  /** Organizations that are fully connected and ready for API calls */
+  connectedOrganizations: OrganizationConnectionInfo[];
+  /** Organizations that still need the user to complete connection */
+  pendingOrganizations: OrganizationConnectionInfo[];
+  /**
+   * If there are still pending organizations, this URL is provided.
+   * Redirect the user to complete remaining org connections.
+   */
+  connectionsUrl: string | null;
+  /** The refresh token (may be updated - always save this!) */
+  refreshToken: string;
+}
+```
+
+**Example response (all orgs connected):**
+```json
+{
+  "connectedOrganizations": [
+    {
+      "id": "123456",
+      "name": "Smith Family Farms",
+      "type": "customer",
+      "needsConnection": false
+    },
+    {
+      "id": "789012",
+      "name": "Smith Consulting",
+      "type": "customer",
+      "needsConnection": false
+    }
+  ],
+  "pendingOrganizations": [],
+  "connectionsUrl": null,
+  "refreshToken": "v1.MjU2OmFkNjg0OGNm..."
+}
+```
+
+**Example response (still has pending orgs):**
+```json
+{
+  "connectedOrganizations": [
+    {
+      "id": "123456",
+      "name": "Smith Family Farms",
+      "type": "customer",
+      "needsConnection": false
+    }
+  ],
+  "pendingOrganizations": [
+    {
+      "id": "789012",
+      "name": "Partner Co-op",
+      "type": "customer",
+      "needsConnection": true,
+      "connectionsUrl": "https://connections.deere.com/..."
+    }
+  ],
+  "connectionsUrl": "https://connections.deere.com/connections/abc-123/select-organizations?redirect_uri=...",
+  "refreshToken": "v1.MjU2OmFkNjg0OGNm..."
+}
+```
 
 ---
 
@@ -170,6 +388,10 @@ export async function getUserFields(userId: string) {
   // Get the refresh token you saved earlier
   const refreshToken = await getRefreshTokenFromDatabase(userId);
 
+  // Get the organization ID you saved during auth flow
+  // IMPORTANT: Most API calls require an organization ID!
+  const organizationId = await getOrganizationIdFromDatabase(userId);
+
   // Create an API client
   // This automatically gets a fresh access token for you!
   const client = await createJohnDeereClient({
@@ -183,15 +405,16 @@ export async function getUserFields(userId: string) {
     },
   });
 
-  // Get their organizations (farms/operations they manage)
+  // If you need to list all organizations the user has access to:
   const orgs = await client.organizations.list();
-  
-  // Get fields for the first organization
-  const fields = await client.fields.list(orgs[0].id);
-  
+
+  // Get fields for a specific organization
+  // The organizationId is required for most API calls!
+  const fields = await client.fields.list(organizationId);
+
   // Get boundaries for a specific field
   const boundaries = await client.boundaries.listForField(
-    orgs[0].id,
+    organizationId,
     fields[0].id,
     { embed: 'multipolygons' }  // Include the actual shape data
   );
@@ -205,6 +428,51 @@ export async function getUserFields(userId: string) {
 - It automatically refreshes expired tokens
 - You just call methods like `client.fields.list()` to get data
 - The `onTokenRefresh` callback is important - sometimes JD issues new refresh tokens
+
+### Understanding Organization IDs
+
+The organization ID is crucial - **almost every API call requires it**. Here's how to manage it:
+
+```typescript
+// Organization object structure (what you get from auth flow)
+interface Organization {
+  id: string;        // e.g., "123456" - THIS is what you need for API calls
+  name: string;      // e.g., "Smith Family Farms"
+  type: string;      // e.g., "customer"
+}
+
+// Example: Storing organization during auth callback
+async function saveOrganizationIds(userId: string, orgs: Organization[]) {
+  // Store in your database - you'll need the ID for every API call!
+  // Consider storing the full org object so you can display the name to users
+  await database.users.update({
+    where: { id: userId },
+    data: {
+      // If user has multiple orgs, you might want to let them choose
+      // For now, we'll just save the first one as their "active" org
+      activeOrganizationId: orgs[0].id,
+      // Optionally store all org IDs if user has multiple
+      organizationIds: orgs.map(org => org.id),
+    }
+  });
+}
+
+// Example: Using organization ID for API calls
+async function getFieldsForUser(userId: string) {
+  const user = await database.users.findUnique({ where: { id: userId }});
+  const organizationId = user.activeOrganizationId;
+
+  const client = await createJohnDeereClient({ /* ... */ });
+
+  // Pass organizationId to API methods
+  const fields = await client.fields.list(organizationId);
+  const machines = await client.machines.list(organizationId);
+
+  return { fields, machines };
+}
+```
+
+> 💡 **Why is organization ID needed?** Farmers can belong to multiple organizations (their own farm, a co-op, a consulting business, etc.). The organization ID tells John Deere which organization's data you want to access.
 
 ---
 
@@ -266,6 +534,47 @@ if (result.connectionsUrl) {
   // Redirect user to complete setup
   redirect(result.connectionsUrl);
 }
+```
+
+### ❌ Mistake 5: Using OAuth Callback for Org Connection Return
+
+```typescript
+// BAD - using the same endpoint for OAuth callback AND org connection return
+// The org connection redirect does NOT include a code!
+export async function handleCallback(code: string) {
+  // This will fail when user returns from org connection
+  // because there's no code parameter!
+}
+
+// GOOD - use separate endpoints
+// /api/auth/callback - handles OAuth with code exchange
+// /api/auth/org-connected - handles return from org selection (no code)
+if (result.connectionsUrl) {
+  const url = new URL(result.connectionsUrl);
+  url.searchParams.set('redirect_uri', `${baseUrl}/api/auth/org-connected`);
+  redirect(url.toString());
+}
+```
+
+### ❌ Mistake 6: Not Saving Organization IDs
+
+```typescript
+// BAD - throwing away the org info from auth flow
+const result = await oauth.exchangeCodeForTokens(code);
+await saveRefreshToken(result.refreshToken);
+// Forgot to save organization IDs!
+
+// Later... how do I know which org to use for API calls?
+const fields = await client.fields.list(???); // 🤷
+
+// GOOD - save organization info during auth
+const result = await oauth.exchangeCodeForTokens(code);
+await saveRefreshToken(result.refreshToken);
+await saveOrganizations(result.organizations);  // Save these!
+
+// Later... I know exactly which org to use
+const orgId = await getActiveOrganizationId(userId);
+const fields = await client.fields.list(orgId);  // ✅
 ```
 
 ---

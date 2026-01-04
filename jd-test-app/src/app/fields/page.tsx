@@ -212,6 +212,7 @@ export default function FieldsPage() {
         <div className="flex-1 relative">
           {!loading && !error && geoJSON.features.length > 0 ? (
             <Map
+              key="fields-map"
               bounds={mapBounds}
               height="100%"
               initialGeoJSON={geoJSON}

@@ -6,8 +6,8 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useNativeMap } from '../../MapContext';
 import { useDataOverlaySafe } from '../hooks';
 import { fetchWFSFeatures } from '../utils/wfsUtils';
 import { getSoilStyle, getSelectedSoilStyle, getHoverSoilStyle } from '../utils/soilStyles';
@@ -28,7 +28,7 @@ export function SoilLayer({
   onSelectionChange,
   fetchFeatures,
 }: SoilLayerProps) {
-  const map = useMap();
+  const map = useNativeMap();
   const context = useDataOverlaySafe();
 
   // Custom pane for soil layer (z-index 450, below hydro)

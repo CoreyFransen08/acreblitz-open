@@ -11,8 +11,8 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { useNativeMap } from '../../MapContext';
 import { useDataOverlaySafe } from '../hooks';
 import { fetchHydroFeatures, HYDRO_LAYER_IDS } from '../utils/esriUtils';
 import {
@@ -38,7 +38,7 @@ export function HydroLayer({
   onSelectionChange,
   fetchFeatures,
 }: HydroLayerProps) {
-  const map = useMap();
+  const map = useNativeMap();
   const context = useDataOverlaySafe();
 
   // Custom panes for hydro layers (z-index 460-462, above soil at 450)

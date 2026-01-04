@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import type { Map as LeafletMap, FeatureGroup } from 'leaflet';
 import type { MapProps, MapClickEvent, MapMoveEvent } from '../../types/map';
 import { createLayerConfig } from '../../utils/mapLayers';
 import { MapSkeleton } from './MapSkeleton';
+import { MapContext } from './MapContext';
 
 // Leaflet CSS imports
 import 'leaflet/dist/leaflet.css';
@@ -22,16 +23,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Dynamic imports for SSR safety
-let MapContainer: any;
-let ZoomControl: any;
-let ScaleControl: any;
-let AttributionControl: any;
-let MapLayers: any;
-let MapControls: any;
+// Import child components (they'll use useNativeMap from MapContext)
+import { MapLayers } from './MapLayers';
+import { MapControls } from './MapControls';
+import { GeoJSONLayer } from './GeoJSONLayer';
 
 /**
- * Map component using Leaflet with react-leaflet
+ * Map component using native Leaflet
  *
  * Features:
  * - ESRI World Imagery (satellite) as default layer
@@ -87,66 +85,74 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
   },
   ref
 ) {
-  const [isClient, setIsClient] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const drawnItemsRef = useRef<FeatureGroup | null>(null);
-
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   // Expose map instance via ref
-  useImperativeHandle(ref, () => mapInstance!, [mapInstance]);
+  useImperativeHandle<LeafletMap | null, LeafletMap | null>(ref, () => mapInstance, [mapInstance]);
 
-  // Load react-leaflet components on client side only
+  // Check if we're on the client side (for SSR safety)
   useEffect(() => {
-    const loadComponents = async () => {
-      try {
-        const [reactLeaflet, mapLayersModule, mapControlsModule] = await Promise.all([
-          import('react-leaflet'),
-          import('./MapLayers'),
-          import('./MapControls'),
-        ]);
-
-        MapContainer = reactLeaflet.MapContainer;
-        ZoomControl = reactLeaflet.ZoomControl;
-        ScaleControl = reactLeaflet.ScaleControl;
-        AttributionControl = reactLeaflet.AttributionControl;
-        MapLayers = mapLayersModule.MapLayers;
-        MapControls = mapControlsModule.MapControls;
-
-        setIsClient(true);
-        setIsLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to load map components'));
-        setIsLoading(false);
-      }
-    };
-
-    loadComponents();
+    setIsClient(true);
   }, []);
 
-  // Handle map ready event (from whenReady callback)
-  const handleMapReady = useCallback(
-    (e: { target: LeafletMap }) => {
-      const map = e.target;
+  // Initialize the Leaflet map
+  useEffect(() => {
+    // Don't initialize on server or if container doesn't exist
+    if (!isClient || !containerRef.current) return;
+
+    // Don't re-initialize if map already exists
+    if (mapRef.current) return;
+
+    try {
+      // Create the map instance
+      const map = L.map(containerRef.current, {
+        center: center as L.LatLngExpression,
+        zoom,
+        minZoom,
+        maxZoom,
+        maxBounds: maxBounds as L.LatLngBoundsExpression | undefined,
+        scrollWheelZoom,
+        doubleClickZoom,
+        dragging,
+        zoomControl: false, // We'll add controls separately
+        attributionControl: false,
+      });
+
       mapRef.current = map;
       setMapInstance(map);
 
       // Fit to bounds if provided
       if (bounds) {
-        map.fitBounds(bounds);
+        map.fitBounds(bounds as L.LatLngBoundsExpression);
       }
 
-      // Notify parent
+      // Notify parent that map is ready
       eventHandlers?.onReady?.(map);
-    },
-    [bounds, eventHandlers]
-  );
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to initialize map'));
+    }
 
-  // Handle map click
-  const handleClick = useCallback(
-    (e: any) => {
+    // Cleanup function
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        setMapInstance(null);
+      }
+    };
+  }, [isClient]); // Only re-run when isClient changes
+
+  // Handle map event listeners
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    const handleClick = (e: L.LeafletMouseEvent) => {
       if (eventHandlers?.onClick) {
         const event: MapClickEvent = {
           latlng: { lat: e.latlng.lat, lng: e.latlng.lng },
@@ -155,45 +161,71 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
         };
         eventHandlers.onClick(event);
       }
-    },
-    [eventHandlers]
-  );
+    };
 
-  // Handle map move end
-  const handleMoveEnd = useCallback(
-    (e: any) => {
-      if (eventHandlers?.onMoveEnd || eventHandlers?.onZoomEnd) {
-        const map = e.target as LeafletMap;
-        const center = map.getCenter();
+    const handleMoveEnd = () => {
+      if (eventHandlers?.onMoveEnd) {
+        const center = mapInstance.getCenter();
         const event: MapMoveEvent = {
           center: { lat: center.lat, lng: center.lng },
-          bounds: map.getBounds(),
-          zoom: map.getZoom(),
+          bounds: mapInstance.getBounds(),
+          zoom: mapInstance.getZoom(),
         };
-
-        eventHandlers?.onMoveEnd?.(event);
+        eventHandlers.onMoveEnd(event);
       }
-    },
-    [eventHandlers]
-  );
+    };
 
-  // Handle zoom end
-  const handleZoomEnd = useCallback(
-    (e: any) => {
+    const handleZoomEnd = () => {
       if (eventHandlers?.onZoomEnd) {
-        const map = e.target as LeafletMap;
-        const center = map.getCenter();
+        const center = mapInstance.getCenter();
         const event: MapMoveEvent = {
           center: { lat: center.lat, lng: center.lng },
-          bounds: map.getBounds(),
-          zoom: map.getZoom(),
+          bounds: mapInstance.getBounds(),
+          zoom: mapInstance.getZoom(),
         };
-
         eventHandlers.onZoomEnd(event);
       }
-    },
-    [eventHandlers]
-  );
+    };
+
+    mapInstance.on('click', handleClick);
+    mapInstance.on('moveend', handleMoveEnd);
+    mapInstance.on('zoomend', handleZoomEnd);
+
+    return () => {
+      mapInstance.off('click', handleClick);
+      mapInstance.off('moveend', handleMoveEnd);
+      mapInstance.off('zoomend', handleZoomEnd);
+    };
+  }, [mapInstance, eventHandlers]);
+
+  // Handle native controls (zoom, scale, attribution)
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    const controls: L.Control[] = [];
+
+    if (showZoomControl) {
+      const zoomControl = L.control.zoom({ position: 'topleft' });
+      zoomControl.addTo(mapInstance);
+      controls.push(zoomControl);
+    }
+
+    if (showScaleControl) {
+      const scaleControl = L.control.scale({ position: 'bottomleft' });
+      scaleControl.addTo(mapInstance);
+      controls.push(scaleControl);
+    }
+
+    if (showAttributionControl) {
+      const attributionControl = L.control.attribution({ position: 'bottomright' });
+      attributionControl.addTo(mapInstance);
+      controls.push(attributionControl);
+    }
+
+    return () => {
+      controls.forEach((control) => control.remove());
+    };
+  }, [mapInstance, showZoomControl, showScaleControl, showAttributionControl]);
 
   // Container styles
   const containerStyle = {
@@ -205,8 +237,8 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
   // Prepare layer config
   const layerConfig = createLayerConfig(layers);
 
-  // Show loading state
-  if (isLoading || !isClient) {
+  // Show loading state (before client-side hydration)
+  if (!isClient) {
     if (loadingComponent) {
       return (
         <div className={`acb-map-wrapper ${className || ''}`} style={containerStyle}>
@@ -246,34 +278,14 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
   const dataOverlaysEnabled = dataOverlays?.enabled ?? false;
   const showDataOverlayPanel = dataOverlays?.showPanel ?? true;
 
-  // Map content (shared between with/without data overlays)
-  const mapContent = (
-    <MapContainer
-      className="acb-map-container"
-      center={center}
-      zoom={zoom}
-      minZoom={minZoom}
-      maxZoom={maxZoom}
-      maxBounds={maxBounds}
-      scrollWheelZoom={scrollWheelZoom}
-      doubleClickZoom={doubleClickZoom}
-      dragging={dragging}
-      zoomControl={false}
-      attributionControl={false}
-      whenReady={handleMapReady}
-      eventHandlers={{
-        click: handleClick,
-        moveend: handleMoveEnd,
-        zoomend: handleZoomEnd,
-      }}
-    >
+  // Child components that need map access
+  const mapChildren = mapInstance ? (
+    <>
       {/* Layers */}
       <MapLayers layers={layerConfig} showLayerControl={showLayerControl} />
 
-      {/* Controls */}
-      {showZoomControl && <ZoomControl position="topleft" />}
-      {showScaleControl && <ScaleControl position="bottomleft" />}
-      {showAttributionControl && <AttributionControl position="bottomright" />}
+      {/* GeoJSON Layer (display-only when drawing is disabled) */}
+      {initialGeoJSON && !drawing?.enabled && <GeoJSONLayer data={initialGeoJSON} />}
 
       {/* Drawing, Measurement, and Forecast Controls */}
       <MapControls
@@ -283,15 +295,13 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
         units={units}
         eventHandlers={eventHandlers}
         drawnItemsRef={drawnItemsRef}
-        initialGeoJSON={initialGeoJSON}
+        initialGeoJSON={drawing?.enabled ? initialGeoJSON : undefined}
       />
 
-      {/* Data Overlay Components (rendered inside MapContainer for access to map) */}
+      {/* Data Overlay Components */}
       {dataOverlaysEnabled && (
         <>
-          {showDataOverlayPanel && (
-            <DataOverlayPanel {...dataOverlays?.panelConfig} />
-          )}
+          {showDataOverlayPanel && <DataOverlayPanel {...dataOverlays?.panelConfig} />}
           <DataOverlayRenderer
             onSoilFeatureClick={eventHandlers?.onSoilFeatureClick}
             onSoilFeatureSelect={eventHandlers?.onSoilFeatureSelect}
@@ -300,7 +310,21 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
           />
         </>
       )}
-    </MapContainer>
+    </>
+  ) : null;
+
+  // Wrap content with providers
+  const content = (
+    <MapContext.Provider value={mapInstance ? { map: mapInstance } : null}>
+      {/* Map container div */}
+      <div
+        ref={containerRef}
+        className="acb-map-container"
+        style={{ width: '100%', height: '100%' }}
+      />
+      {/* Child components rendered outside map div but with context access */}
+      {mapChildren}
+    </MapContext.Provider>
   );
 
   // Wrap with DataOverlayProvider if enabled
@@ -309,14 +333,14 @@ export const Map = forwardRef<LeafletMap | null, MapProps>(function Map(
       overlays={dataOverlays?.overlays}
       defaultVisibility={dataOverlays?.defaultVisibility}
     >
-      {mapContent}
+      {content}
     </DataOverlayProvider>
   ) : (
-    mapContent
+    content
   );
 
   return (
-    <div className={`acb-map-wrapper ${className || ''}`} style={containerStyle}>
+    <div ref={wrapperRef} className={`acb-map-wrapper ${className || ''}`} style={containerStyle}>
       {wrappedContent}
     </div>
   );

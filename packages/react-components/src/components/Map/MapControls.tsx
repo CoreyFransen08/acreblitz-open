@@ -1,16 +1,17 @@
-import { useEffect, useCallback } from 'react';
-import { FeatureGroup, useMap } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
+import { useEffect, useCallback, useRef } from 'react';
 import L from 'leaflet';
+import 'leaflet-draw';
 import type { MapControlsProps, DrawCreatedEvent, DrawEditedEvent, DrawDeletedEvent } from '../../types/map';
 import { MeasureControl } from './plugins/MeasureControl';
 import { ClickForecastControl } from './plugins/ClickForecastControl';
+import { useNativeMap } from './MapContext';
 
 // Import leaflet-draw styles
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 /**
  * MapControls component handles drawing, measurement, and click forecast controls
+ * Uses native Leaflet instead of react-leaflet
  */
 export function MapControls({
   drawing,
@@ -21,81 +22,80 @@ export function MapControls({
   drawnItemsRef,
   initialGeoJSON,
 }: MapControlsProps) {
-  const map = useMap();
+  const map = useNativeMap();
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const featureGroupRef = useRef<L.FeatureGroup | null>(null);
 
-  // Hide draw actions on mobile to prevent duplicate icon issue
+  // Initialize drawing functionality
   useEffect(() => {
-    const hideDrawActions = () => {
-      const actions = document.querySelectorAll('.leaflet-draw-actions');
-      actions.forEach((action) => {
-        const el = action as HTMLElement;
-        // Only hide if not actively drawing (no enabled button)
-        const parent = el.closest('li');
-        if (parent && !parent.classList.contains('leaflet-draw-toolbar-button-enabled')) {
-          el.style.display = 'none';
-        }
-      });
+    if (!drawing?.enabled) return;
+
+    // Create feature group for drawn items
+    const drawnItems = L.featureGroup().addTo(map);
+    featureGroupRef.current = drawnItems;
+    drawnItemsRef.current = drawnItems;
+
+    // Build draw options
+    const shapeOptions = drawing.shapeOptions || {
+      color: '#3b82f6',
+      weight: 2,
+      fillOpacity: 0.2,
     };
 
-    // Run on mount and when draw tools change
-    hideDrawActions();
+    const drawConfig = drawing.draw;
+    const drawOptions: L.Control.DrawConstructorOptions['draw'] = drawConfig
+      ? {
+          polyline: drawConfig.polyline === false ? false : { shapeOptions },
+          polygon: drawConfig.polygon === false ? false : { shapeOptions },
+          rectangle: drawConfig.rectangle === false ? false : { shapeOptions },
+          circle: drawConfig.circle === false ? false : { shapeOptions },
+          marker: drawConfig.marker === false ? false : {},
+          circlemarker: drawConfig.circlemarker === false ? false : {},
+        }
+      : {
+          polyline: { shapeOptions },
+          polygon: { shapeOptions },
+          rectangle: { shapeOptions },
+          circle: { shapeOptions },
+          marker: {},
+          circlemarker: {},
+        };
 
-    // Also run after a short delay to catch any late rendering
-    const timer = setTimeout(hideDrawActions, 100);
+    // Build edit options
+    const editConfig = drawing.edit;
+    const editOptions: L.Control.DrawConstructorOptions['edit'] = {
+      featureGroup: drawnItems,
+      edit: editConfig?.edit === false ? false : {},
+      remove: editConfig?.remove === false ? false : {},
+    };
 
-    // Listen for draw events to show/hide actions appropriately
-    map.on('draw:drawstart', () => {
-      // Allow actions to show when actively drawing
+    // Create draw control
+    const drawControl = new L.Control.Draw({
+      position: drawing.position || 'topright',
+      draw: drawOptions,
+      edit: editOptions,
     });
 
-    map.on('draw:drawstop draw:editstop draw:deletestop', hideDrawActions);
+    drawControlRef.current = drawControl;
+    map.addControl(drawControl);
 
-    return () => {
-      clearTimeout(timer);
-      map.off('draw:drawstop draw:editstop draw:deletestop', hideDrawActions);
-    };
-  }, [map]);
-
-  // Load initial GeoJSON if provided
-  useEffect(() => {
-    if (initialGeoJSON && drawnItemsRef.current) {
-      try {
-        L.geoJSON(initialGeoJSON, {
-          onEachFeature: (_feature, layer) => {
-            drawnItemsRef.current?.addLayer(layer);
-          },
-        });
-      } catch (error) {
-        console.error('Failed to load initial GeoJSON:', error);
-      }
-    }
-  }, [initialGeoJSON, drawnItemsRef]);
-
-  // Handle draw:created event
-  const handleCreated = useCallback(
-    (e: any) => {
+    // Event handlers
+    const handleCreated = (e: L.DrawEvents.Created) => {
       const layer = e.layer;
-      const layerType = e.layerType;
-
-      // The layer is automatically added to the FeatureGroup by EditControl
-      // We just need to notify the parent
+      drawnItems.addLayer(layer);
 
       if (eventHandlers?.onDrawCreated) {
-        const geoJSON = layer.toGeoJSON?.() || null;
+        const geoJSON = (layer as any).toGeoJSON?.() || null;
         const event: DrawCreatedEvent = {
-          layerType,
+          layerType: e.layerType,
           layer,
           geoJSON,
         };
         eventHandlers.onDrawCreated(event);
       }
-    },
-    [eventHandlers]
-  );
+    };
 
-  // Handle draw:edited event
-  const handleEdited = useCallback(
-    (e: any) => {
+    const handleEdited = (e: L.DrawEvents.Edited) => {
       if (eventHandlers?.onDrawEdited) {
         const layers: L.Layer[] = [];
         const features: GeoJSON.Feature[] = [];
@@ -113,13 +113,9 @@ export function MapControls({
         };
         eventHandlers.onDrawEdited(event);
       }
-    },
-    [eventHandlers]
-  );
+    };
 
-  // Handle draw:deleted event
-  const handleDeleted = useCallback(
-    (e: any) => {
+    const handleDeleted = (e: L.DrawEvents.Deleted) => {
       if (eventHandlers?.onDrawDeleted) {
         const layers: L.Layer[] = [];
         e.layers.eachLayer((layer: L.Layer) => {
@@ -131,111 +127,91 @@ export function MapControls({
         };
         eventHandlers.onDrawDeleted(event);
       }
-    },
-    [eventHandlers]
-  );
+    };
 
-  // Handle draw:drawstart event
-  const handleDrawStart = useCallback(
-    (e: any) => {
+    const handleDrawStart = (e: L.DrawEvents.DrawStart) => {
       if (eventHandlers?.onDrawStart) {
         eventHandlers.onDrawStart(e.layerType);
       }
-    },
-    [eventHandlers]
-  );
-
-  // Handle draw:drawstop event
-  const handleDrawStop = useCallback(() => {
-    if (eventHandlers?.onDrawStop) {
-      eventHandlers.onDrawStop();
-    }
-  }, [eventHandlers]);
-
-  // Store ref to feature group
-  const handleFeatureGroupRef = useCallback(
-    (ref: L.FeatureGroup | null) => {
-      drawnItemsRef.current = ref;
-    },
-    [drawnItemsRef]
-  );
-
-  // Build draw options from props
-  const getDrawOptions = () => {
-    if (!drawing?.enabled) {
-      return false;
-    }
-
-    const drawConfig = drawing.draw;
-    const shapeOptions = drawing.shapeOptions || {
-      color: '#3b82f6',
-      weight: 2,
-      fillOpacity: 0.2,
     };
 
-    // Default: all tools enabled
-    const defaultTools = {
-      polyline: { shapeOptions },
-      polygon: { shapeOptions },
-      rectangle: { shapeOptions },
-      circle: { shapeOptions },
-      marker: {},
-      circlemarker: {},
+    const handleDrawStop = () => {
+      if (eventHandlers?.onDrawStop) {
+        eventHandlers.onDrawStop();
+      }
     };
 
-    if (!drawConfig) {
-      return defaultTools;
-    }
+    // Attach event listeners
+    map.on(L.Draw.Event.CREATED, handleCreated);
+    map.on(L.Draw.Event.EDITED, handleEdited);
+    map.on(L.Draw.Event.DELETED, handleDeleted);
+    map.on(L.Draw.Event.DRAWSTART, handleDrawStart);
+    map.on(L.Draw.Event.DRAWSTOP, handleDrawStop);
 
-    return {
-      polyline: drawConfig.polyline === false ? false : { shapeOptions },
-      polygon: drawConfig.polygon === false ? false : { shapeOptions },
-      rectangle: drawConfig.rectangle === false ? false : { shapeOptions },
-      circle: drawConfig.circle === false ? false : { shapeOptions },
-      marker: drawConfig.marker === false ? false : {},
-      circlemarker: drawConfig.circlemarker === false ? false : {},
+    // Cleanup
+    return () => {
+      map.off(L.Draw.Event.CREATED, handleCreated);
+      map.off(L.Draw.Event.EDITED, handleEdited);
+      map.off(L.Draw.Event.DELETED, handleDeleted);
+      map.off(L.Draw.Event.DRAWSTART, handleDrawStart);
+      map.off(L.Draw.Event.DRAWSTOP, handleDrawStop);
+
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+      }
+
+      if (featureGroupRef.current) {
+        map.removeLayer(featureGroupRef.current);
+        featureGroupRef.current = null;
+        drawnItemsRef.current = null;
+      }
     };
-  };
+  }, [map, drawing?.enabled, drawing?.position, drawing?.draw, drawing?.edit, drawing?.shapeOptions, eventHandlers, drawnItemsRef]);
 
-  // Build edit options from props
-  const getEditOptions = () => {
-    if (!drawing?.enabled) {
-      return false;
+  // Load initial GeoJSON into feature group when drawing is enabled
+  useEffect(() => {
+    if (!initialGeoJSON || !featureGroupRef.current) return;
+
+    try {
+      L.geoJSON(initialGeoJSON, {
+        onEachFeature: (_feature, layer) => {
+          featureGroupRef.current?.addLayer(layer);
+        },
+      });
+    } catch (error) {
+      console.error('Failed to load initial GeoJSON:', error);
     }
+  }, [initialGeoJSON]);
 
-    const editConfig = drawing.edit;
-    if (!editConfig) {
-      // Default: edit and remove enabled
-      return {
-        edit: {},
-        remove: {},
-      };
-    }
+  // Hide draw actions on mobile to prevent duplicate icon issue
+  useEffect(() => {
+    if (!drawing?.enabled) return;
 
-    return {
-      edit: editConfig.edit === false ? false : {},
-      remove: editConfig.remove === false ? false : {},
+    const hideDrawActions = () => {
+      const actions = document.querySelectorAll('.leaflet-draw-actions');
+      actions.forEach((action) => {
+        const el = action as HTMLElement;
+        const parent = el.closest('li');
+        if (parent && !parent.classList.contains('leaflet-draw-toolbar-button-enabled')) {
+          el.style.display = 'none';
+        }
+      });
     };
-  };
+
+    hideDrawActions();
+    const timer = setTimeout(hideDrawActions, 100);
+
+    map.on('draw:drawstop draw:editstop draw:deletestop', hideDrawActions);
+
+    return () => {
+      clearTimeout(timer);
+      map.off('draw:drawstop draw:editstop draw:deletestop', hideDrawActions);
+    };
+  }, [map, drawing?.enabled]);
 
   return (
     <>
-      {/* Feature Group for drawn items */}
-      <FeatureGroup ref={handleFeatureGroupRef}>
-        {drawing?.enabled && (
-          <EditControl
-            position={drawing.position || 'topright'}
-            onCreated={handleCreated}
-            onEdited={handleEdited}
-            onDeleted={handleDeleted}
-            onDrawStart={handleDrawStart}
-            onDrawStop={handleDrawStop}
-            draw={getDrawOptions()}
-            edit={getEditOptions()}
-          />
-        )}
-      </FeatureGroup>
-
       {/* Measure Control */}
       {measure?.enabled && (
         <MeasureControl
