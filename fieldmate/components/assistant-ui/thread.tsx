@@ -30,6 +30,9 @@ import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
 import { WeatherToolUI } from "@/components/assistant-ui/tools/weather-tool-ui";
+import { SoilMoistureToolUI } from "@/components/assistant-ui/tools/soil-moisture-tool-ui";
+import { SoilTemperatureToolUI } from "@/components/assistant-ui/tools/soil-temperature-tool-ui";
+import { PrecipitationToolUI } from "@/components/assistant-ui/tools/precipitation-tool-ui";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 
 // Dynamic imports for tool UIs that use Leaflet to avoid SSR issues
@@ -272,6 +275,9 @@ const AssistantMessage: FC = () => {
                   getWeather: WeatherToolUI,
                   showFieldsOnMap: MapToolUI,
                   getSoilData: SoilToolUI,
+                  getSoilMoisture: SoilMoistureToolUI,
+                  getSoilTemperature: SoilTemperatureToolUI,
+                  getHourlyPrecipitation: PrecipitationToolUI,
                 },
               },
             }}

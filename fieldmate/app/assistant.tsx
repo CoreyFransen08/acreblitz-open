@@ -33,9 +33,9 @@ export const Assistant = () => {
                 <SidebarTrigger />
                 <Separator orientation="vertical" className="mr-2 h-4" />
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold">FieldMate</span>
+                  <span className="text-lg font-semibold">AcreBlitz Assistant</span>
                   <span className="text-sm text-muted-foreground hidden md:inline">
-                    AI Farm Assistant
+                    AI-Powered Farm Intelligence
                   </span>
                 </div>
               </div>

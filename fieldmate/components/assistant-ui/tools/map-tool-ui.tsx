@@ -71,6 +71,10 @@ function buildDataOverlays(overlays: {
     showPanel: true,
     overlays: overlayConfigs,
     defaultVisibility,
+    panelConfig: {
+      position: "bottomright",
+      collapsed: true,
+    },
   };
 }
 
