@@ -249,24 +249,15 @@ export const listWorkPlansTool = createTool({
     "List work plans for an organization. Work plans contain field operations like planting, harvesting, tillage, and applications.",
   inputSchema: z.object({
     organizationId: z.string().describe("The John Deere organization ID"),
-    year: z
-      .number()
-      .optional()
-      .describe("Filter by calendar year (e.g., 2024)"),
-    workType: z
-      .enum(["tillage", "seeding", "application", "harvest"])
-      .optional()
-      .describe("Filter by work type"),
-    workStatus: z
-      .enum(["planned", "in_progress", "completed"])
-      .optional()
-      .describe("Filter by work status"),
+    year: z.number().describe("Filter by calendar year (e.g., 2026). Always provide the current year."),
   }),
   execute: async ({ context }) => {
-    const { organizationId, year, workType, workStatus } = context;
+    const { organizationId, year } = context;
+
     try {
       const client = await getJohnDeereClient();
 
+      // Fetch all work plans for the year (no type/status filters)
       const result = await listWorkPlans({
         context: {
           provider: "john_deere",
@@ -274,8 +265,6 @@ export const listWorkPlansTool = createTool({
         },
         organizationId,
         year,
-        workType,
-        workStatus,
       });
 
       // Cache work plans

@@ -33,8 +33,17 @@ interface GridPointData {
   state: string;
 }
 
+// Weather data cache to prevent duplicate fetches
+interface WeatherDataCache {
+  data: WeatherData;
+  timestamp: number;
+  promise?: Promise<WeatherData>;
+}
+
 const gridPointCache = new Map<string, GridPointCache>();
+const weatherDataCache = new Map<string, WeatherDataCache>();
 const GRID_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const WEATHER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for weather data
 
 /**
  * Generate cache key for coordinates
@@ -166,20 +175,12 @@ async function getCurrentConditions(
 }
 
 /**
- * Fetch complete weather data for a location
+ * Internal function to fetch weather data (not cached)
  */
-export async function fetchWeatherData(
+async function fetchWeatherDataInternal(
   latitude: number,
   longitude: number
 ): Promise<WeatherData> {
-  // Validate coordinates
-  if (latitude < -90 || latitude > 90) {
-    throw new Error('Invalid latitude: must be between -90 and 90');
-  }
-  if (longitude < -180 || longitude > 180) {
-    throw new Error('Invalid longitude: must be between -180 and 180');
-  }
-
   // Get grid point (cached)
   const gridPoint = await getGridPoint(latitude, longitude);
 
@@ -204,8 +205,69 @@ export async function fetchWeatherData(
 }
 
 /**
- * Clear the grid point cache (useful for testing)
+ * Fetch complete weather data for a location
+ * Results are cached for 5 minutes to prevent duplicate requests
+ * Concurrent requests for the same coordinates are deduplicated
+ */
+export async function fetchWeatherData(
+  latitude: number,
+  longitude: number
+): Promise<WeatherData> {
+  // Validate coordinates
+  if (latitude < -90 || latitude > 90) {
+    throw new Error('Invalid latitude: must be between -90 and 90');
+  }
+  if (longitude < -180 || longitude > 180) {
+    throw new Error('Invalid longitude: must be between -180 and 180');
+  }
+
+  const cacheKey = getCacheKey(latitude, longitude);
+  const cached = weatherDataCache.get(cacheKey);
+
+  // Return cached data if still fresh
+  if (cached?.data && Date.now() - cached.timestamp < WEATHER_CACHE_TTL) {
+    return cached.data;
+  }
+
+  // If there's an in-flight request, wait for it (request deduplication)
+  if (cached?.promise) {
+    return cached.promise;
+  }
+
+  // Create new fetch promise and store it for deduplication
+  const fetchPromise = fetchWeatherDataInternal(latitude, longitude);
+
+  // Store the promise immediately for deduplication
+  weatherDataCache.set(cacheKey, {
+    data: cached?.data as WeatherData, // Keep old data while fetching
+    timestamp: cached?.timestamp ?? 0,
+    promise: fetchPromise,
+  });
+
+  try {
+    const data = await fetchPromise;
+
+    // Cache the result
+    weatherDataCache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      promise: undefined, // Clear the promise
+    });
+
+    return data;
+  } catch (error) {
+    // On error, clear the promise so next request can retry
+    if (weatherDataCache.get(cacheKey)?.promise === fetchPromise) {
+      weatherDataCache.delete(cacheKey);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Clear all weather caches (useful for testing)
  */
 export function clearWeatherCache(): void {
   gridPointCache.clear();
+  weatherDataCache.clear();
 }

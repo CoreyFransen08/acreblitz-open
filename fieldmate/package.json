@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@acreblitz/platform-integrations": "file:../packages/platform-integrations",
+    "@acreblitz/react-components": "file:../packages/react-components",
     "@ai-sdk/openai": "^2.0.86",
     "@assistant-ui/react": "^0.11.51",
     "@assistant-ui/react-ai-sdk": "^1.1.19",
@@ -38,6 +39,10 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@turf/area": "^7.3.1",
+    "@turf/helpers": "^7.3.1",
+    "@turf/intersect": "^7.3.1",
+    "@xmldom/xmldom": "^0.8.11",
     "ai": "^5.0.113",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

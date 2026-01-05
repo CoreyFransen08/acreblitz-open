@@ -23,11 +23,24 @@ import type { FC } from "react";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import * as m from "motion/react-m";
 
+import dynamic from "next/dynamic";
+
 import { Button } from "@/components/ui/button";
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
+import { WeatherToolUI } from "@/components/assistant-ui/tools/weather-tool-ui";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+
+// Dynamic imports for tool UIs that use Leaflet to avoid SSR issues
+const MapToolUI = dynamic(
+  () => import("@/components/assistant-ui/tools/map-tool-ui").then((mod) => mod.MapToolUI),
+  { ssr: false }
+);
+const SoilToolUI = dynamic(
+  () => import("@/components/assistant-ui/tools/soil-tool-ui").then((mod) => mod.SoilToolUI),
+  { ssr: false }
+);
 import {
   ComposerAddAttachment,
   ComposerAttachments,
@@ -119,24 +132,24 @@ const ThreadSuggestions: FC = () => {
     <div className="aui-thread-welcome-suggestions grid w-full gap-2 pb-4 @md:grid-cols-2">
       {[
         {
+          title: "Show me my fields",
+          label: "and their sizes",
+          action: "Show me my fields and their sizes",
+        },
+        {
           title: "What's the weather",
-          label: "in San Francisco?",
-          action: "What's the weather in San Francisco?",
+          label: "for my fields?",
+          action: "What's the weather forecast for my fields?",
         },
         {
-          title: "Explain React hooks",
-          label: "like useState and useEffect",
-          action: "Explain React hooks like useState and useEffect",
+          title: "Show my work plans",
+          label: "for this year",
+          action: "Show me my work plans for this year",
         },
         {
-          title: "Write a SQL query",
-          label: "to find top customers",
-          action: "Write a SQL query to find top customers",
-        },
-        {
-          title: "Create a meal plan",
-          label: "for healthy weight loss",
-          action: "Create a meal plan for healthy weight loss",
+          title: "List my organizations",
+          label: "connected to John Deere",
+          action: "List my John Deere organizations",
         },
       ].map((suggestedAction, index) => (
         <m.div
@@ -253,7 +266,14 @@ const AssistantMessage: FC = () => {
               Text: MarkdownText,
               Reasoning: Reasoning,
               ReasoningGroup: ReasoningGroup,
-              tools: { Fallback: ToolFallback },
+              tools: {
+                Fallback: ToolFallback,
+                by_name: {
+                  getWeather: WeatherToolUI,
+                  showFieldsOnMap: MapToolUI,
+                  getSoilData: SoilToolUI,
+                },
+              },
             }}
           />
           <MessageError />
