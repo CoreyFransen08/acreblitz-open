@@ -44,16 +44,20 @@ export {
   // Field mapping
   mapJohnDeereField,
   mapJohnDeereFields,
-  
+
   // Boundary mapping
   mapJohnDeereBoundary,
   mapJohnDeereBoundaries,
   type JDBoundaryWithGeometry,
-  
+
   // Organization mapping
   mapJohnDeereOrganization,
   type OrganizationInfo,
-  
+
+  // Work plan mapping
+  mapJohnDeereWorkPlan,
+  mapJohnDeereWorkPlans,
+
   // Helpers
   extractOrgIdFromLink,
   extractFieldIdFromLink,

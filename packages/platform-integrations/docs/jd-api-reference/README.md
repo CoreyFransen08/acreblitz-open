@@ -14,8 +14,22 @@ This directory contains reference documentation for John Deere Operations Center
 |----------|-----|-------------|
 | [Fields](./fields.md) | ✅ | `client.fields.list()`, `client.fields.get()` |
 | [Boundaries](./boundaries.md) | ✅ | `client.boundaries.*` |
+| [Field Operations](./field-operations.md) | ✅ | `client.operations.*` |
+| [Products](./products.md) | ✅ | `client.products.*` |
+| [Equipment](./equipment.md) | ✅ | `client.equipment.*` |
 | Organizations | 🔜 | `client.organizations.*` |
-| Operations | 🔜 | `client.operations.*` |
+| [Work Plans](./work-plans.md) | ✅ | `client.workPlans.*` |
+
+## Base URLs
+
+> ⚠️ John Deere APIs use **different base URLs** depending on the endpoint:
+
+| API | Base URL |
+|-----|----------|
+| Fields, Boundaries, Operations, Products, Organizations | `https://partnerapi.deere.com` |
+| Equipment | `https://equipmentapi.deere.com/isg` |
+
+Authentication tokens work across both domains.
 
 ## Common Patterns
 

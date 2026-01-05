@@ -12,8 +12,10 @@ import type {
   Field,
   Boundary,
   Operation,
+  WorkPlan,
   ListBoundariesOptions,
   ListFieldsOptions,
+  ListWorkPlansOptions,
 } from '../../types/john-deere';
 import type { ApiLink } from '../../types/common';
 import { JD_API_BASE_URLS, JD_OAUTH_ENDPOINTS, JohnDeereError } from '../../types/john-deere';
@@ -39,6 +41,10 @@ export interface JohnDeereClient {
   };
   operations: {
     list(orgId: string, fieldId: string): Promise<Operation[]>;
+  };
+  workPlans: {
+    list(orgId: string, options?: ListWorkPlansOptions): Promise<WorkPlan[]>;
+    get(orgId: string, erid: string): Promise<WorkPlan>;
   };
 }
 
@@ -227,6 +233,50 @@ class JohnDeereClientImpl implements JohnDeereClient {
         `${this.baseUrl}/organizations/${orgId}/fields/${fieldId}/operations`,
         this.accessToken
       );
+    },
+  };
+
+  // ==========================================================================
+  // Work Plans
+  // ==========================================================================
+
+  workPlans = {
+    /**
+     * List work plans for an organization
+     */
+    list: async (orgId: string, options?: ListWorkPlansOptions): Promise<WorkPlan[]> => {
+      const url = new URL(`${this.baseUrl}/organizations/${orgId}/workPlans`);
+
+      if (options?.year !== undefined) {
+        url.searchParams.set('year', String(options.year));
+      }
+      if (options?.workType) {
+        url.searchParams.set('workType', options.workType);
+      }
+      if (options?.workStatus) {
+        url.searchParams.set('workStatus', options.workStatus);
+      }
+      if (options?.startDate) {
+        url.searchParams.set('startDate', options.startDate);
+      }
+      if (options?.endDate) {
+        url.searchParams.set('endDate', options.endDate);
+      }
+      if (options?.workPlanErids?.length) {
+        url.searchParams.set('workPlanErids', options.workPlanErids.join(','));
+      }
+      if (options?.fieldIds?.length) {
+        url.searchParams.set('fieldIds', options.fieldIds.join(','));
+      }
+
+      return this.fetchAllPages<WorkPlan>(url.toString(), this.accessToken);
+    },
+
+    /**
+     * Get a specific work plan by ERID
+     */
+    get: async (orgId: string, erid: string): Promise<WorkPlan> => {
+      return this.request<WorkPlan>(`/organizations/${orgId}/workPlans/${erid}`);
     },
   };
 }

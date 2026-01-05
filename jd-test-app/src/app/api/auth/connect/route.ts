@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
       redirectUri,
     });
 
-    log("info", "Generating authorization URL with scopes: ag1, ag2, ag3, eq1, offline_access");
+    log("info", "Generating authorization URL with scopes: ag1, ag2, ag3, eq1, work1, offline_access");
     const { url, state } = oauth.getAuthorizationUrl({
-      scopes: ["ag1", "ag2", "ag3", "eq1", "offline_access"],
+      scopes: ["ag1", "ag2", "ag3", "eq1", "work1", "offline_access"],
     });
 
     log("success", "Authorization URL generated successfully");

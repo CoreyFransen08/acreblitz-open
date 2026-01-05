@@ -10,6 +10,8 @@ The unified services provide provider-agnostic functions for working with agricu
 | `getField()` | Get a single field by ID |
 | `listBoundaries()` | List boundaries with pagination and filtering |
 | `getBoundary()` | Get a single boundary by ID |
+| `listWorkPlans()` | List work plans with pagination and filtering |
+| `getWorkPlan()` | Get a single work plan by ID |
 
 ## Import
 
@@ -19,15 +21,20 @@ import {
   getField,
   listBoundaries,
   getBoundary,
-  
+  listWorkPlans,
+  getWorkPlan,
+
   // Types
   type ListFieldsParams,
   type GetFieldParams,
   type ListBoundariesParams,
   type GetBoundaryParams,
+  type ListWorkPlansParams,
+  type GetWorkPlanParams,
   type PaginatedResult,
   type UnifiedField,
   type UnifiedBoundary,
+  type UnifiedWorkPlan,
 } from '@acreblitz/platform-integrations';
 ```
 
@@ -354,6 +361,228 @@ const boundary = await getBoundary({
 console.log(boundary.area);        // { value: 45.5, unit: 'ha' }
 console.log(boundary.isActive);    // true
 console.log(boundary.geometry);    // GeoJSON object
+```
+
+---
+
+## listWorkPlans()
+
+List work plans from a provider with pagination and filtering.
+
+### Signature
+
+```typescript
+async function listWorkPlans(params: ListWorkPlansParams): Promise<PaginatedResult<UnifiedWorkPlan>>
+```
+
+### Parameters
+
+```typescript
+interface ListWorkPlansParams {
+  /** Provider context with authenticated client */
+  context: ProviderContext;
+
+  /** Organization/account ID */
+  organizationId: string;
+
+  /** Filter by calendar year (optional) */
+  year?: number;
+
+  /** Filter by work type (optional) */
+  workType?: 'tillage' | 'seeding' | 'application' | 'harvest';
+
+  /** Filter by work status: 'planned' | 'in_progress' | 'completed' | 'all' (default: 'all') */
+  workStatus?: 'planned' | 'in_progress' | 'completed' | 'all';
+
+  /** Filter by start date ISO 8601 (optional) */
+  startDate?: string;
+
+  /** Filter by end date ISO 8601 (optional) */
+  endDate?: string;
+
+  /** Filter by specific field IDs (optional) */
+  fieldIds?: string[];
+
+  /** Pagination options */
+  pagination?: {
+    page?: number;      // 1-indexed (default: 1)
+    pageSize?: number;  // 1-100 (default: 50)
+    cursor?: string;    // For cursor-based pagination
+  };
+}
+```
+
+### Returns
+
+```typescript
+interface PaginatedResult<UnifiedWorkPlan> {
+  data: UnifiedWorkPlan[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems?: number;
+    totalPages?: number;
+    hasNextPage: boolean;
+    nextCursor?: string;
+  };
+}
+```
+
+### Example
+
+```typescript
+import { createJohnDeereClient, listWorkPlans } from '@acreblitz/platform-integrations';
+
+const client = await createJohnDeereClient({ /* ... */ });
+
+// List all planned seeding work plans for 2025
+const result = await listWorkPlans({
+  context: { provider: 'john_deere', client },
+  organizationId: 'org-123',
+  year: 2025,
+  workType: 'seeding',
+  workStatus: 'planned',
+  pagination: { page: 1, pageSize: 25 },
+});
+
+console.log(`Found ${result.pagination.totalItems} work plans`);
+result.data.forEach(wp => {
+  console.log(`${wp.workType}: ${wp.workStatus} - ${wp.operations.length} operations`);
+});
+```
+
+---
+
+## getWorkPlan()
+
+Get a single work plan by ID.
+
+### Signature
+
+```typescript
+async function getWorkPlan(params: GetWorkPlanParams): Promise<UnifiedWorkPlan>
+```
+
+### Parameters
+
+```typescript
+interface GetWorkPlanParams {
+  /** Provider context with authenticated client */
+  context: ProviderContext;
+
+  /** Organization/account ID */
+  organizationId: string;
+
+  /** Work plan ID (erid for John Deere) */
+  workPlanId: string;
+}
+```
+
+### Returns
+
+```typescript
+interface UnifiedWorkPlan {
+  id: string;
+  providerId: string;
+  provider: string;
+  organizationId: string;
+  fieldId?: string;
+  fieldUri?: string;
+  workType: 'tillage' | 'seeding' | 'application' | 'harvest';
+  workStatus: 'planned' | 'in_progress' | 'completed';
+  year: number;
+  workOrder?: string;
+  instructions?: string;
+  sequenceNumber?: number;
+  operations: UnifiedWorkPlanOperation[];
+  assignments: UnifiedWorkPlanAssignment[];
+  guidanceSettings?: UnifiedGuidanceSettings;
+  metadata?: Record<string, unknown>;
+}
+
+interface UnifiedWorkPlanOperation {
+  operationType: 'tillage' | 'seeding' | 'application' | 'harvest';
+  inputs: UnifiedOperationInput[];
+}
+
+interface UnifiedOperationInput {
+  product: {
+    uri?: string;
+    inputType: 'crop' | 'variety' | 'chemical' | 'fertilizer' | 'tank_mix' | 'dry_blend';
+    varietySelectionMode: 'user_defined' | 'variety_locator' | 'none';
+  };
+  prescription?: {
+    type: 'fixed_rate' | 'variable_rate';
+    fixedRate?: { value: number; unit: string; vrDomainId?: string };
+    prescriptionUse?: {
+      fileUri?: string;
+      unit?: string;
+      vrDomainId?: string;
+      prescriptionLayerUri?: string;
+      multiplier?: { value: number; unit: string };
+      multiplierMode?: string;
+      lookAhead?: { value: number; unit: string };
+      lookAheadMode?: string;
+    };
+  };
+}
+
+interface UnifiedWorkPlanAssignment {
+  machineUri?: string;
+  machineId?: string;
+  operatorUri?: string;
+  operatorId?: string;
+  implementUris?: string[];
+  implementIds?: string[];
+}
+
+interface UnifiedGuidanceSettings {
+  preferences?: {
+    includeLatestFieldOperation?: string;
+    preferenceMode?: string;
+    preferredEntity?: {
+      entityType: 'guidance_line' | 'guidance_plan' | 'source_operation';
+      entityUri?: string;
+      entityId?: string;
+    };
+  };
+  includedGuidance?: Array<{
+    entityType: 'guidance_line' | 'guidance_plan' | 'source_operation';
+    entityUri?: string;
+    entityId?: string;
+  }>;
+}
+```
+
+### Example
+
+```typescript
+const workPlan = await getWorkPlan({
+  context: { provider: 'john_deere', client },
+  organizationId: 'org-123',
+  workPlanId: 'wp-456',
+});
+
+console.log(workPlan.workType);     // 'seeding'
+console.log(workPlan.workStatus);   // 'planned'
+console.log(workPlan.year);         // 2025
+
+// Access operations and inputs
+workPlan.operations.forEach(op => {
+  console.log(`Operation: ${op.operationType}`);
+  op.inputs.forEach(input => {
+    console.log(`  Input: ${input.product.inputType}`);
+    if (input.prescription?.type === 'fixed_rate') {
+      console.log(`  Rate: ${input.prescription.fixedRate?.value} ${input.prescription.fixedRate?.unit}`);
+    }
+  });
+});
+
+// Access equipment assignments
+workPlan.assignments.forEach(assignment => {
+  console.log(`Machine: ${assignment.machineId}`);
+  console.log(`Implements: ${assignment.implementIds?.join(', ')}`);
+});
 ```
 
 ---

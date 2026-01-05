@@ -246,6 +246,12 @@ export default function Home() {
             >
               View Fields on Map
             </Link>
+            <Link
+              href="/work-plans"
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-medium block text-center"
+            >
+              View Work Plans
+            </Link>
             <button
               onClick={handleDisconnect}
               className="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium"

@@ -278,8 +278,211 @@ export interface Operation {
 }
 
 // ============================================================================
+// Work Plan Types
+// ============================================================================
+
+/**
+ * Work type identifiers (John Deere domain IDs)
+ */
+export type WorkType = 'dtiTillage' | 'dtiSeeding' | 'dtiApplication' | 'dtiHarvest';
+
+/**
+ * Work plan status values
+ */
+export type WorkStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED';
+
+/**
+ * Input type for operation products
+ */
+export type InputType = 'CROP' | 'VARIETY' | 'CHEMICAL' | 'FERTILIZER' | 'TANK_MIX' | 'DRY_BLEND';
+
+/**
+ * Variety selection mode for products
+ */
+export type VarietySelectionMode = 'USER_DEFINED' | 'USE_VARIETY_LOCATOR' | 'NONE';
+
+/**
+ * Guidance entity types
+ */
+export type GuidanceEntityType = 'GUIDANCE_LINE' | 'GUIDANCE_PLAN' | 'SOURCE_OPERATION';
+
+/**
+ * Work type object structure
+ */
+export interface WorkTypeObject {
+  representationDomainId: string;
+  instanceDomainId: string;
+}
+
+/**
+ * Fixed rate prescription
+ */
+export interface FixedRate {
+  valueAsDouble: number;
+  unit: string;
+  vrDomainId: string;
+}
+
+/**
+ * Prescription multiplier settings
+ */
+export interface PrescriptionMultiplier {
+  valueAsDouble: number;
+  unit: string;
+  vrDomainId: string;
+}
+
+/**
+ * Prescription look-ahead settings
+ */
+export interface PrescriptionLookAhead {
+  valueAsDouble: number;
+  unit: string;
+  vrDomainId: string;
+}
+
+/**
+ * Variable rate prescription use
+ */
+export interface PrescriptionUse {
+  fileUri: string;
+  unit: string;
+  vrDomainId: string;
+  prescriptionLayerUri?: string;
+  multiplier?: PrescriptionMultiplier;
+  multiplierMode?: string;
+  lookAhead?: PrescriptionLookAhead;
+  lookAheadMode?: string;
+}
+
+/**
+ * Operation prescription (either fixed rate or variable rate)
+ */
+export interface OperationPrescription {
+  fixedRate?: FixedRate;
+  prescriptionUse?: PrescriptionUse;
+}
+
+/**
+ * Operation product definition
+ */
+export interface OperationProduct {
+  inputUri: string;
+  inputType: InputType;
+  varietySelectionMode: VarietySelectionMode;
+}
+
+/**
+ * Operation input (product + prescription)
+ */
+export interface OperationInput {
+  operationProduct: OperationProduct;
+  operationPrescription?: OperationPrescription;
+}
+
+/**
+ * Work plan operation
+ */
+export interface WorkPlanOperation {
+  operationType: WorkTypeObject;
+  operationInputs: OperationInput[];
+}
+
+/**
+ * Work plan equipment assignment
+ */
+export interface WorkPlanAssignment {
+  equipmentMachineUri?: string;
+  operatorUri?: string;
+  equipmentImplementUris?: string[];
+}
+
+/**
+ * Guidance entity reference
+ */
+export interface GuidanceEntity {
+  entityType: GuidanceEntityType;
+  entityUri: string;
+}
+
+/**
+ * Guidance preference settings
+ */
+export interface GuidancePreferenceSettings {
+  includeLatestFieldOperation?: string;
+  preferenceMode?: string;
+  entityType?: GuidanceEntityType;
+  entityUri?: string;
+}
+
+/**
+ * Guidance settings for work plan
+ */
+export interface GuidanceSettings {
+  preferenceSettings?: GuidancePreferenceSettings;
+  includeGuidance?: GuidanceEntity[];
+}
+
+/**
+ * Work plan resource from John Deere API
+ */
+export interface WorkPlan {
+  '@type'?: string;
+  /** Work plan ID (ERID - unique within organization) */
+  erid: string;
+  /** Location where work will be executed */
+  location: {
+    fieldUri: string;
+  };
+  /** Work type definition */
+  workType: WorkTypeObject;
+  /** Calendar year */
+  year: number;
+  /** Operations in this work plan (1-2 items) */
+  operations: WorkPlanOperation[];
+  /** Equipment/operator assignments */
+  workPlanAssignments: WorkPlanAssignment[];
+  /** Guidance configuration */
+  guidanceSettings?: GuidanceSettings;
+  /** Current work status */
+  workStatus: WorkStatus;
+  /** Work order grouping */
+  workOrder?: string;
+  /** Operator instructions */
+  instructions?: string;
+  /** Priority indicator (lower = higher priority) */
+  sequenceNumber?: number;
+  /** HATEOAS links */
+  links?: ApiLink[];
+}
+
+// ============================================================================
 // API Request Options
 // ============================================================================
+
+/**
+ * Options for listing work plans
+ */
+export interface ListWorkPlansOptions {
+  /** Filter by calendar year */
+  year?: number;
+  /** Filter by work type */
+  workType?: WorkType;
+  /** Filter by work status */
+  workStatus?: WorkStatus | 'ALL';
+  /** Filter by date range start (ISO 8601) */
+  startDate?: string;
+  /** Filter by date range end (ISO 8601) */
+  endDate?: string;
+  /** Pagination offset */
+  pageOffset?: number;
+  /** Results per page */
+  itemLimit?: number;
+  /** Filter to specific work plan ERIDs */
+  workPlanErids?: string[];
+  /** Filter to specific field IDs */
+  fieldIds?: string[];
+}
 
 /**
  * Options for listing boundaries

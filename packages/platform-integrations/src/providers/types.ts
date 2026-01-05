@@ -8,6 +8,9 @@
 import type {
   UnifiedField,
   UnifiedBoundary,
+  UnifiedWorkPlan,
+  UnifiedWorkType,
+  UnifiedWorkStatus,
   PaginatedResult,
   MapperOptions,
   Provider,
@@ -138,6 +141,61 @@ export interface BoundaryAdapter<TClient = ProviderClient> {
 }
 
 // ============================================================================
+// WORK PLAN ADAPTER INTERFACE
+// ============================================================================
+
+/**
+ * Options for listing work plans from a provider
+ */
+export interface ListWorkPlansAdapterOptions {
+  organizationId: string;
+  year?: number;
+  workType?: UnifiedWorkType;
+  workStatus?: UnifiedWorkStatus | 'all';
+  startDate?: string;
+  endDate?: string;
+  fieldIds?: string[];
+  page: number;
+  pageSize: number;
+  mapperOptions: MapperOptions;
+}
+
+/**
+ * Options for getting a single work plan from a provider
+ */
+export interface GetWorkPlanAdapterOptions {
+  organizationId: string;
+  workPlanId: string;
+  mapperOptions: MapperOptions;
+}
+
+/**
+ * Work plan adapter interface - implemented by each provider
+ */
+export interface WorkPlanAdapter<TClient = ProviderClient> {
+  /**
+   * The provider type this adapter handles
+   */
+  readonly providerType: ProviderType;
+
+  /**
+   * List work plans from the provider
+   */
+  listWorkPlans(
+    client: TClient,
+    options: ListWorkPlansAdapterOptions
+  ): Promise<PaginatedResult<UnifiedWorkPlan>>;
+
+  /**
+   * Get a single work plan by ID
+   */
+  getWorkPlan(
+    client: TClient,
+    options: GetWorkPlanAdapterOptions
+  ): Promise<UnifiedWorkPlan>;
+}
+
+// ============================================================================
 // COMBINED PROVIDER ADAPTER
 // ============================================================================
 
@@ -149,5 +207,6 @@ export interface ProviderAdapter<TClient = ProviderClient> {
   readonly providerType: ProviderType;
   readonly fields: FieldAdapter<TClient>;
   readonly boundaries: BoundaryAdapter<TClient>;
+  readonly workPlans?: WorkPlanAdapter<TClient>;
 }
 

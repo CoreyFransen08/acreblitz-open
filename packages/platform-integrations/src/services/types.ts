@@ -322,10 +322,225 @@ export interface MapperOptions {
   units?: UnitOptions;
   /** Additional context (org name, farm name, etc.) */
   context?: {
+    organizationId?: string;
     organizationName?: string;
     farmName?: string;
     fieldName?: string;
   };
+}
+
+// ============================================================================
+// UNIFIED WORK PLAN
+// ============================================================================
+
+/**
+ * Unified work status (normalized from provider formats)
+ */
+export type UnifiedWorkStatus = 'planned' | 'in_progress' | 'completed';
+
+/**
+ * Unified work type (normalized from provider formats)
+ */
+export type UnifiedWorkType = 'tillage' | 'seeding' | 'application' | 'harvest';
+
+/**
+ * Unified input type for operation products
+ */
+export type UnifiedInputType = 'crop' | 'variety' | 'chemical' | 'fertilizer' | 'tank_mix' | 'dry_blend';
+
+/**
+ * Unified variety selection mode
+ */
+export type UnifiedVarietySelectionMode = 'user_defined' | 'variety_locator' | 'none';
+
+/**
+ * Unified guidance entity type
+ */
+export type UnifiedGuidanceEntityType = 'guidance_line' | 'guidance_plan' | 'source_operation';
+
+/**
+ * Unified fixed rate prescription
+ */
+export interface UnifiedFixedRate {
+  value: number;
+  unit: string;
+  vrDomainId?: string;
+}
+
+/**
+ * Unified prescription multiplier
+ */
+export interface UnifiedPrescriptionMultiplier {
+  value: number;
+  unit: string;
+}
+
+/**
+ * Unified look-ahead settings
+ */
+export interface UnifiedLookAhead {
+  value: number;
+  unit: string;
+}
+
+/**
+ * Unified variable rate prescription
+ */
+export interface UnifiedPrescriptionUse {
+  fileUri: string;
+  unit: string;
+  vrDomainId?: string;
+  prescriptionLayerUri?: string;
+  multiplier?: UnifiedPrescriptionMultiplier;
+  multiplierMode?: string;
+  lookAhead?: UnifiedLookAhead;
+  lookAheadMode?: string;
+}
+
+/**
+ * Unified operation prescription
+ */
+export interface UnifiedOperationPrescription {
+  type: 'fixed_rate' | 'variable_rate';
+  fixedRate?: UnifiedFixedRate;
+  prescriptionUse?: UnifiedPrescriptionUse;
+}
+
+/**
+ * Unified operation product
+ */
+export interface UnifiedOperationProduct {
+  uri: string;
+  inputType: UnifiedInputType;
+  varietySelectionMode: UnifiedVarietySelectionMode;
+}
+
+/**
+ * Unified operation input (product + prescription)
+ */
+export interface UnifiedOperationInput {
+  product: UnifiedOperationProduct;
+  prescription?: UnifiedOperationPrescription;
+}
+
+/**
+ * Unified work plan operation
+ */
+export interface UnifiedWorkPlanOperation {
+  operationType: UnifiedWorkType;
+  inputs: UnifiedOperationInput[];
+}
+
+/**
+ * Unified work plan assignment
+ */
+export interface UnifiedWorkPlanAssignment {
+  machineUri?: string;
+  machineId?: string;
+  operatorUri?: string;
+  operatorId?: string;
+  implementUris?: string[];
+  implementIds?: string[];
+}
+
+/**
+ * Unified guidance entity
+ */
+export interface UnifiedGuidanceEntity {
+  entityType: UnifiedGuidanceEntityType;
+  entityUri: string;
+  entityId?: string;
+}
+
+/**
+ * Unified guidance preference settings
+ */
+export interface UnifiedGuidancePreferences {
+  includeLatestFieldOperation?: string;
+  preferenceMode?: string;
+  preferredEntity?: UnifiedGuidanceEntity;
+}
+
+/**
+ * Unified guidance settings
+ */
+export interface UnifiedGuidanceSettings {
+  preferences?: UnifiedGuidancePreferences;
+  includedGuidance?: UnifiedGuidanceEntity[];
+}
+
+/**
+ * Unified work plan representation (provider-agnostic)
+ */
+export interface UnifiedWorkPlan {
+  /** Internal/unified ID (same as providerId for now) */
+  id: string;
+  /** Provider's work plan ID */
+  providerId: string;
+  /** Provider name */
+  provider: Provider;
+  /** Organization ID */
+  organizationId: string;
+  /** Target field ID (extracted from fieldUri) */
+  fieldId?: string;
+  /** Target field URI (original) */
+  fieldUri?: string;
+  /** Work type */
+  workType: UnifiedWorkType;
+  /** Current work status */
+  workStatus: UnifiedWorkStatus;
+  /** Calendar year */
+  year: number;
+  /** Work order grouping */
+  workOrder?: string;
+  /** Operator instructions */
+  instructions?: string;
+  /** Priority indicator (lower = higher priority) */
+  sequenceNumber?: number;
+  /** Operations in this work plan */
+  operations: UnifiedWorkPlanOperation[];
+  /** Equipment/operator assignments */
+  assignments: UnifiedWorkPlanAssignment[];
+  /** Guidance settings */
+  guidanceSettings?: UnifiedGuidanceSettings;
+  /** Provider-specific metadata */
+  metadata?: Record<string, unknown>;
+}
+
+// ============================================================================
+// WORK PLAN SERVICE PARAMS
+// ============================================================================
+
+/**
+ * Params for listing work plans
+ */
+export interface ListWorkPlansParams extends BaseServiceParams {
+  /** Organization ID */
+  organizationId: string;
+  /** Filter by calendar year */
+  year?: number;
+  /** Filter by work type */
+  workType?: UnifiedWorkType;
+  /** Filter by work status */
+  workStatus?: UnifiedWorkStatus | 'all';
+  /** Filter by date range start (ISO 8601) */
+  startDate?: string;
+  /** Filter by date range end (ISO 8601) */
+  endDate?: string;
+  /** Filter to specific field IDs */
+  fieldIds?: string[];
+  /** Pagination options */
+  pagination?: PaginationOptions;
+}
+
+/**
+ * Params for getting a single work plan
+ */
+export interface GetWorkPlanParams extends BaseServiceParams {
+  /** Organization ID */
+  organizationId: string;
+  /** Work plan ID to retrieve */
+  workPlanId: string;
 }
 
 // ============================================================================

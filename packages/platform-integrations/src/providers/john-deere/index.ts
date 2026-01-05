@@ -18,3 +18,7 @@ export type { JohnDeereFieldClient } from './field-adapter';
 // Boundary adapter
 export { JohnDeereBoundaryAdapter, johnDeereBoundaryAdapter } from './boundary-adapter';
 export type { JohnDeereBoundaryClient } from './boundary-adapter';
+
+// Work plan adapter
+export { JohnDeereWorkPlanAdapter, johnDeereWorkPlanAdapter } from './workplan-adapter';
+export type { JohnDeereWorkPlanClient } from './workplan-adapter';

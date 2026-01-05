@@ -4,10 +4,38 @@
  * Convert John Deere API responses to unified format.
  */
 
-import type { Field, Boundary, Organization } from '../types/john-deere';
+import type {
+  Field,
+  Boundary,
+  Organization,
+  WorkPlan,
+  WorkPlanOperation,
+  WorkPlanAssignment,
+  OperationInput,
+  GuidanceSettings,
+  GuidanceEntity,
+  WorkStatus,
+  InputType,
+  VarietySelectionMode,
+  GuidanceEntityType,
+} from '../types/john-deere';
 import type {
   UnifiedField,
   UnifiedBoundary,
+  UnifiedWorkPlan,
+  UnifiedWorkPlanOperation,
+  UnifiedWorkPlanAssignment,
+  UnifiedOperationInput,
+  UnifiedOperationProduct,
+  UnifiedOperationPrescription,
+  UnifiedGuidanceSettings,
+  UnifiedGuidancePreferences,
+  UnifiedGuidanceEntity,
+  UnifiedWorkType,
+  UnifiedWorkStatus,
+  UnifiedInputType,
+  UnifiedVarietySelectionMode,
+  UnifiedGuidanceEntityType,
   MapperOptions,
   AreaMeasurement,
   RecordStatus,
@@ -210,6 +238,244 @@ export function mapJohnDeereOrganization(jdOrg: Organization): OrganizationInfo 
     name: jdOrg.name,
     type: jdOrg.type,
   };
+}
+
+// ============================================================================
+// WORK PLAN MAPPER
+// ============================================================================
+
+/**
+ * Map JD work type to unified work type
+ */
+function mapWorkType(jdWorkType: string): UnifiedWorkType {
+  const mapping: Record<string, UnifiedWorkType> = {
+    'dtiTillage': 'tillage',
+    'dtiSeeding': 'seeding',
+    'dtiApplication': 'application',
+    'dtiHarvest': 'harvest',
+  };
+  return mapping[jdWorkType] ?? 'tillage';
+}
+
+/**
+ * Map JD work status to unified work status
+ */
+function mapWorkStatus(jdStatus: WorkStatus): UnifiedWorkStatus {
+  const mapping: Record<WorkStatus, UnifiedWorkStatus> = {
+    'PLANNED': 'planned',
+    'IN_PROGRESS': 'in_progress',
+    'COMPLETED': 'completed',
+  };
+  return mapping[jdStatus] ?? 'planned';
+}
+
+/**
+ * Map JD input type to unified input type
+ */
+function mapInputType(jdInputType: InputType): UnifiedInputType {
+  const mapping: Record<InputType, UnifiedInputType> = {
+    'CROP': 'crop',
+    'VARIETY': 'variety',
+    'CHEMICAL': 'chemical',
+    'FERTILIZER': 'fertilizer',
+    'TANK_MIX': 'tank_mix',
+    'DRY_BLEND': 'dry_blend',
+  };
+  return mapping[jdInputType] ?? 'crop';
+}
+
+/**
+ * Map JD variety selection mode to unified
+ */
+function mapVarietySelectionMode(jdMode: VarietySelectionMode): UnifiedVarietySelectionMode {
+  const mapping: Record<VarietySelectionMode, UnifiedVarietySelectionMode> = {
+    'USER_DEFINED': 'user_defined',
+    'USE_VARIETY_LOCATOR': 'variety_locator',
+    'NONE': 'none',
+  };
+  return mapping[jdMode] ?? 'none';
+}
+
+/**
+ * Map JD guidance entity type to unified
+ */
+function mapGuidanceEntityType(jdType: GuidanceEntityType): UnifiedGuidanceEntityType {
+  const mapping: Record<GuidanceEntityType, UnifiedGuidanceEntityType> = {
+    'GUIDANCE_LINE': 'guidance_line',
+    'GUIDANCE_PLAN': 'guidance_plan',
+    'SOURCE_OPERATION': 'source_operation',
+  };
+  return mapping[jdType] ?? 'guidance_line';
+}
+
+/**
+ * Extract ID from a URI pattern
+ */
+function extractIdFromUri(uri: string, resource: string): string | undefined {
+  const pattern = new RegExp(`/${resource}/([^/]+)`);
+  const match = uri.match(pattern);
+  return match ? match[1] : undefined;
+}
+
+/**
+ * Map JD operation input to unified format
+ */
+function mapOperationInput(input: OperationInput): UnifiedOperationInput {
+  const product: UnifiedOperationProduct = {
+    uri: input.operationProduct.inputUri,
+    inputType: mapInputType(input.operationProduct.inputType),
+    varietySelectionMode: mapVarietySelectionMode(input.operationProduct.varietySelectionMode),
+  };
+
+  let prescription: UnifiedOperationPrescription | undefined;
+  if (input.operationPrescription) {
+    const { fixedRate, prescriptionUse } = input.operationPrescription;
+    if (fixedRate) {
+      prescription = {
+        type: 'fixed_rate',
+        fixedRate: {
+          value: fixedRate.valueAsDouble,
+          unit: fixedRate.unit,
+          vrDomainId: fixedRate.vrDomainId,
+        },
+      };
+    } else if (prescriptionUse) {
+      prescription = {
+        type: 'variable_rate',
+        prescriptionUse: {
+          fileUri: prescriptionUse.fileUri,
+          unit: prescriptionUse.unit,
+          vrDomainId: prescriptionUse.vrDomainId,
+          prescriptionLayerUri: prescriptionUse.prescriptionLayerUri,
+          multiplier: prescriptionUse.multiplier
+            ? { value: prescriptionUse.multiplier.valueAsDouble, unit: prescriptionUse.multiplier.unit }
+            : undefined,
+          multiplierMode: prescriptionUse.multiplierMode,
+          lookAhead: prescriptionUse.lookAhead
+            ? { value: prescriptionUse.lookAhead.valueAsDouble, unit: prescriptionUse.lookAhead.unit }
+            : undefined,
+          lookAheadMode: prescriptionUse.lookAheadMode,
+        },
+      };
+    }
+  }
+
+  return { product, prescription };
+}
+
+/**
+ * Map JD work plan operation to unified format
+ */
+function mapOperation(operation: WorkPlanOperation): UnifiedWorkPlanOperation {
+  return {
+    operationType: mapWorkType(operation.operationType.instanceDomainId),
+    inputs: operation.operationInputs.map(mapOperationInput),
+  };
+}
+
+/**
+ * Map JD work plan assignment to unified format
+ */
+function mapAssignment(assignment: WorkPlanAssignment): UnifiedWorkPlanAssignment {
+  return {
+    machineUri: assignment.equipmentMachineUri,
+    machineId: assignment.equipmentMachineUri
+      ? extractIdFromUri(assignment.equipmentMachineUri, 'equipment')
+      : undefined,
+    operatorUri: assignment.operatorUri,
+    operatorId: assignment.operatorUri
+      ? extractIdFromUri(assignment.operatorUri, 'operators')
+      : undefined,
+    implementUris: assignment.equipmentImplementUris,
+    implementIds: assignment.equipmentImplementUris?.map(
+      uri => extractIdFromUri(uri, 'equipment')
+    ).filter((id): id is string => id !== undefined),
+  };
+}
+
+/**
+ * Map JD guidance entity to unified format
+ */
+function mapGuidanceEntity(entity: GuidanceEntity): UnifiedGuidanceEntity {
+  return {
+    entityType: mapGuidanceEntityType(entity.entityType),
+    entityUri: entity.entityUri,
+    entityId: extractIdFromUri(entity.entityUri, 'guidanceLines')
+      ?? extractIdFromUri(entity.entityUri, 'guidancePlans')
+      ?? extractIdFromUri(entity.entityUri, 'fieldOperations'),
+  };
+}
+
+/**
+ * Map JD guidance settings to unified format
+ */
+function mapGuidanceSettings(settings: GuidanceSettings): UnifiedGuidanceSettings {
+  let preferences: UnifiedGuidancePreferences | undefined;
+  if (settings.preferenceSettings) {
+    const prefs = settings.preferenceSettings;
+    preferences = {
+      includeLatestFieldOperation: prefs.includeLatestFieldOperation,
+      preferenceMode: prefs.preferenceMode,
+      preferredEntity: prefs.entityType && prefs.entityUri
+        ? {
+            entityType: mapGuidanceEntityType(prefs.entityType),
+            entityUri: prefs.entityUri,
+            entityId: extractIdFromUri(prefs.entityUri, 'guidanceLines')
+              ?? extractIdFromUri(prefs.entityUri, 'guidancePlans'),
+          }
+        : undefined,
+    };
+  }
+
+  return {
+    preferences,
+    includedGuidance: settings.includeGuidance?.map(mapGuidanceEntity),
+  };
+}
+
+/**
+ * Map John Deere WorkPlan to UnifiedWorkPlan
+ */
+export function mapJohnDeereWorkPlan(
+  jdWorkPlan: WorkPlan,
+  options?: MapperOptions
+): UnifiedWorkPlan {
+  // Extract field ID from location URI
+  const fieldId = extractIdFromUri(jdWorkPlan.location.fieldUri, 'fields');
+
+  return {
+    id: jdWorkPlan.erid,
+    providerId: jdWorkPlan.erid,
+    provider: 'john_deere',
+    organizationId: options?.context?.organizationId ?? '',
+    fieldId,
+    fieldUri: jdWorkPlan.location.fieldUri,
+    workType: mapWorkType(jdWorkPlan.workType.instanceDomainId),
+    workStatus: mapWorkStatus(jdWorkPlan.workStatus),
+    year: jdWorkPlan.year,
+    workOrder: jdWorkPlan.workOrder,
+    instructions: jdWorkPlan.instructions,
+    sequenceNumber: jdWorkPlan.sequenceNumber,
+    operations: jdWorkPlan.operations.map(mapOperation),
+    assignments: jdWorkPlan.workPlanAssignments.map(mapAssignment),
+    guidanceSettings: jdWorkPlan.guidanceSettings
+      ? mapGuidanceSettings(jdWorkPlan.guidanceSettings)
+      : undefined,
+    metadata: {
+      '@type': jdWorkPlan['@type'],
+      links: jdWorkPlan.links,
+    },
+  };
+}
+
+/**
+ * Map array of John Deere WorkPlans to UnifiedWorkPlans
+ */
+export function mapJohnDeereWorkPlans(
+  jdWorkPlans: WorkPlan[],
+  options?: MapperOptions
+): UnifiedWorkPlan[] {
+  return jdWorkPlans.map(wp => mapJohnDeereWorkPlan(wp, options));
 }
 
 // ============================================================================

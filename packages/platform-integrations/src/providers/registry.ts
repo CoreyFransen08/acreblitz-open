@@ -9,9 +9,11 @@ import type {
   ProviderType,
   FieldAdapter,
   BoundaryAdapter,
+  WorkPlanAdapter,
 } from './types';
 import { johnDeereFieldAdapter } from './john-deere/field-adapter';
 import { johnDeereBoundaryAdapter } from './john-deere/boundary-adapter';
+import { johnDeereWorkPlanAdapter } from './john-deere/workplan-adapter';
 
 // ============================================================================
 // FIELD ADAPTER REGISTRY
@@ -88,6 +90,45 @@ export function registerBoundaryAdapter(provider: ProviderType, adapter: Boundar
  */
 export function hasBoundaryAdapter(provider: ProviderType): boolean {
   return boundaryAdapters.has(provider);
+}
+
+// ============================================================================
+// WORK PLAN ADAPTER REGISTRY
+// ============================================================================
+
+/**
+ * Registry of work plan adapters by provider type
+ */
+const workPlanAdapters = new Map<ProviderType, WorkPlanAdapter>();
+
+// Register built-in adapters
+workPlanAdapters.set('john_deere', johnDeereWorkPlanAdapter);
+
+/**
+ * Get the work plan adapter for a provider
+ * @throws Error if provider is not supported
+ */
+export function getWorkPlanAdapter(provider: ProviderType): WorkPlanAdapter {
+  const adapter = workPlanAdapters.get(provider);
+  if (!adapter) {
+    throw new Error(`Unsupported provider: ${provider}. Available providers: ${[...workPlanAdapters.keys()].join(', ')}`);
+  }
+  return adapter;
+}
+
+/**
+ * Register a custom work plan adapter
+ * Useful for testing or adding new providers at runtime
+ */
+export function registerWorkPlanAdapter(provider: ProviderType, adapter: WorkPlanAdapter): void {
+  workPlanAdapters.set(provider, adapter);
+}
+
+/**
+ * Check if a work plan adapter is registered for a provider
+ */
+export function hasWorkPlanAdapter(provider: ProviderType): boolean {
+  return workPlanAdapters.has(provider);
 }
 
 // ============================================================================
