@@ -19,7 +19,8 @@ import {
   ThreadPrimitive,
 } from "@assistant-ui/react";
 
-import type { FC } from "react";
+import { type FC, createContext, useContext } from "react";
+import { useAutoScrollControl } from "@/hooks/use-auto-scroll-control";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -52,51 +53,80 @@ import {
 
 import { cn } from "@/lib/utils";
 
+// Context to share scroll control with child components
+const ScrollControlContext = createContext<{
+  onScrollToBottomClick: () => void;
+  isSticky: boolean;
+}>({
+  onScrollToBottomClick: () => {},
+  isSticky: true,
+});
+
 export const Thread: FC = () => {
+  const { autoScroll, viewportRef, scrollToBottom } = useAutoScrollControl();
+
   return (
-    <LazyMotion features={domAnimation}>
-      <MotionConfig reducedMotion="user">
-        <ThreadPrimitive.Root
-          className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
-          style={{
-            ["--thread-max-width" as string]: "44rem",
-          }}
-        >
-          <ThreadPrimitive.Viewport className="aui-thread-viewport relative flex flex-1 flex-col overflow-x-auto overflow-y-scroll px-4">
-            <ThreadPrimitive.If empty>
-              <ThreadWelcome />
-            </ThreadPrimitive.If>
+    <ScrollControlContext.Provider value={{ onScrollToBottomClick: scrollToBottom, isSticky: autoScroll }}>
+      <LazyMotion features={domAnimation}>
+        <MotionConfig reducedMotion="user">
+          <ThreadPrimitive.Root
+            className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
+            style={{
+              ["--thread-max-width" as string]: "44rem",
+            }}
+          >
+            <ThreadPrimitive.Viewport
+              ref={viewportRef}
+              autoScroll={autoScroll}
+              className="aui-thread-viewport relative flex flex-1 flex-col overflow-x-auto overflow-y-scroll px-4"
+            >
+              <ThreadPrimitive.If empty>
+                <ThreadWelcome />
+              </ThreadPrimitive.If>
 
-            <ThreadPrimitive.Messages
-              components={{
-                UserMessage,
-                EditComposer,
-                AssistantMessage,
-              }}
-            />
+              <ThreadPrimitive.Messages
+                components={{
+                  UserMessage,
+                  EditComposer,
+                  AssistantMessage,
+                }}
+              />
 
-            <ThreadPrimitive.If empty={false}>
-              <div className="aui-thread-viewport-spacer min-h-8 grow" />
-            </ThreadPrimitive.If>
+              <ThreadPrimitive.If empty={false}>
+                <div className="aui-thread-viewport-spacer min-h-8 grow" />
+              </ThreadPrimitive.If>
 
-            <Composer />
-          </ThreadPrimitive.Viewport>
-        </ThreadPrimitive.Root>
-      </MotionConfig>
-    </LazyMotion>
+              <Composer />
+            </ThreadPrimitive.Viewport>
+
+            {/* Floating scroll-to-bottom button */}
+            <ThreadScrollToBottom />
+          </ThreadPrimitive.Root>
+        </MotionConfig>
+      </LazyMotion>
+    </ScrollControlContext.Provider>
   );
 };
 
 const ThreadScrollToBottom: FC = () => {
+  const { onScrollToBottomClick, isSticky } = useContext(ScrollControlContext);
+
+  // Don't render when sticky (at bottom)
+  if (isSticky) return null;
+
   return (
     <ThreadPrimitive.ScrollToBottom asChild>
-      <TooltipIconButton
-        tooltip="Scroll to bottom"
-        variant="outline"
-        className="aui-thread-scroll-to-bottom absolute -top-12 z-10 self-center rounded-full p-4 disabled:invisible dark:bg-background dark:hover:bg-accent"
+      <m.button
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        transition={{ duration: 0.15 }}
+        onClick={onScrollToBottomClick}
+        className="aui-thread-scroll-to-bottom absolute bottom-32 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border bg-background shadow-md hover:bg-accent dark:bg-background dark:hover:bg-accent"
+        aria-label="Scroll to bottom"
       >
-        <ArrowDownIcon />
-      </TooltipIconButton>
+        <ArrowDownIcon className="h-5 w-5" />
+      </m.button>
     </ThreadPrimitive.ScrollToBottom>
   );
 };
@@ -190,7 +220,6 @@ const ThreadSuggestions: FC = () => {
 const Composer: FC = () => {
   return (
     <div className="aui-composer-wrapper sticky bottom-0 mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 overflow-visible rounded-t-3xl bg-background pb-4 md:pb-6">
-      <ThreadScrollToBottom />
       <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
         <ComposerPrimitive.AttachmentDropzone className="aui-composer-attachment-dropzone group/input-group flex w-full flex-col rounded-3xl border border-input bg-background px-1 pt-2 shadow-xs transition-[color,box-shadow] outline-none has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-[3px] has-[textarea:focus-visible]:ring-ring/50 data-[dragging=true]:border-dashed data-[dragging=true]:border-ring data-[dragging=true]:bg-accent/50 dark:bg-background">
           <ComposerAttachments />
