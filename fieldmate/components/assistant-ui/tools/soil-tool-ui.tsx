@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import type { FeatureCollection } from "geojson";
 
 // Dynamic import to avoid SSR issues with Leaflet
-const Map = dynamic(
+// Named MapComponent to avoid conflict with JavaScript's Map constructor
+const MapComponent = dynamic(
   () => import("@acreblitz/react-components").then((mod) => mod.Map),
   { ssr: false, loading: () => <SoilMapLoadingPlaceholder /> }
 );
@@ -29,21 +30,8 @@ interface SoilToolResult {
     fieldAreaAcres: number;
     soilCount: number;
   };
-  agentSummary?: {
-    fieldName: string;
-    fieldAreaAcres: number;
-    dominantSoil: string;
-    dominantSoilPercent: number;
-    soilTypeCount: number;
-    primaryDrainage: string | null;
-    weightedSlope: number | null;
-    weightedAWC: number | null;
-    soils: Array<{
-      name: string;
-      percent: number;
-      drainage: string | null;
-    }>;
-  };
+  // agentSummary is now a text string for LLM context (not used by UI)
+  agentSummary?: string;
 }
 
 /**
@@ -73,7 +61,7 @@ function SoilLegend({
 }: {
   soils: Array<{ name: string; percent: number; drainage: string | null }>;
 }) {
-  if (soils.length === 0) return null;
+  if (!soils || soils.length === 0) return null;
 
   return (
     <div className="absolute bottom-4 left-4 z-[1000] max-w-xs rounded-lg border bg-background/95 p-3 shadow-md backdrop-blur-sm">
@@ -108,14 +96,43 @@ const MemoizedSoilMapDisplay = memo(function MemoizedSoilMapDisplay({
   soilGeoJSON,
   bounds,
   fieldName,
-  soils,
 }: {
   fieldGeoJSON: FeatureCollection;
   soilGeoJSON: FeatureCollection;
   bounds: [[number, number], [number, number]];
   fieldName: string;
-  soils: Array<{ name: string; percent: number; drainage: string | null }>;
 }) {
+  // Extract and aggregate soils for legend from GeoJSON features
+  const soils = useMemo(() => {
+    const soilMap = new Map<
+      string,
+      { name: string; percent: number; drainage: string | null }
+    >();
+
+    for (const feature of soilGeoJSON.features) {
+      const props = feature.properties;
+      if (props?.muname) {
+        const existing = soilMap.get(props.muname);
+        if (existing) {
+          // Aggregate percentages for same soil type
+          existing.percent += props.percentOfField || 0;
+        } else {
+          soilMap.set(props.muname, {
+            name: props.muname,
+            percent: props.percentOfField || 0,
+            drainage: props.drclassdcd || null,
+          });
+        }
+      }
+    }
+
+    // Sort by percent descending and take top 5
+    return Array.from(soilMap.values())
+      .sort((a, b) => b.percent - a.percent)
+      .slice(0, 5)
+      .map((s) => ({ ...s, percent: Math.round(s.percent * 10) / 10 }));
+  }, [soilGeoJSON]);
+
   // Combine field boundary and soil data into one GeoJSON
   // Field boundary will be rendered as outline, soils as filled polygons
   const combinedGeoJSON = useMemo(() => {
@@ -148,7 +165,7 @@ const MemoizedSoilMapDisplay = memo(function MemoizedSoilMapDisplay({
         Soil data for {fieldName}
       </p>
       <div className="relative">
-        <Map
+        <MapComponent
           height="400px"
           bounds={bounds}
           initialGeoJSON={combinedGeoJSON}
@@ -181,19 +198,13 @@ export const SoilToolUI: ToolCallMessagePartComponent = ({
   const soilResult = result as SoilToolResult | undefined;
 
   // Memoize data to prevent unnecessary re-renders during streaming
+  // Note: agentSummary is now a text string for LLM, UI uses uiData only
   const stableData = useMemo(() => {
-    if (
-      !soilResult?.success ||
-      !soilResult.uiData ||
-      !soilResult.agentSummary
-    ) {
+    if (!soilResult?.success || !soilResult.uiData) {
       return null;
     }
-    return {
-      uiData: soilResult.uiData,
-      agentSummary: soilResult.agentSummary,
-    };
-  }, [soilResult?.success, soilResult?.uiData, soilResult?.agentSummary]);
+    return soilResult.uiData;
+  }, [soilResult?.success, soilResult?.uiData]);
 
   // Loading state
   if (status?.type === "requires-action" || status?.type === "running") {
@@ -226,12 +237,11 @@ export const SoilToolUI: ToolCallMessagePartComponent = ({
   // Render the memoized map with soil data
   return (
     <MemoizedSoilMapDisplay
-      key={`soil-${stableData.uiData.bounds[0][0]}-${stableData.uiData.bounds[1][1]}`}
-      fieldGeoJSON={stableData.uiData.fieldGeoJSON}
-      soilGeoJSON={stableData.uiData.soilGeoJSON}
-      bounds={stableData.uiData.bounds}
-      fieldName={stableData.uiData.fieldName}
-      soils={stableData.agentSummary.soils}
+      key={`soil-${stableData.bounds[0][0]}-${stableData.bounds[1][1]}`}
+      fieldGeoJSON={stableData.fieldGeoJSON}
+      soilGeoJSON={stableData.soilGeoJSON}
+      bounds={stableData.bounds}
+      fieldName={stableData.fieldName}
     />
   );
 };

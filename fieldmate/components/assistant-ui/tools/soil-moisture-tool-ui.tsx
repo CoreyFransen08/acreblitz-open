@@ -32,22 +32,12 @@ interface SoilMoistureUIData {
   maxMoisture: number | null;
 }
 
-interface SoilMoistureAgentSummary {
-  fieldName: string | null;
-  dateRange: string;
-  averageMoisture: number | null;
-  moistureDescription: string;
-  minMoisture: number | null;
-  maxMoisture: number | null;
-  daysWithData: number;
-  trend: string;
-}
-
 interface SoilMoistureToolResult {
   success: boolean;
   error?: string;
   uiData?: SoilMoistureUIData;
-  agentSummary?: SoilMoistureAgentSummary;
+  // agentSummary is now a text string for LLM context (not used by UI)
+  agentSummary?: string;
 }
 
 function SoilMoistureSkeleton() {

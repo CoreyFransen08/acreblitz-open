@@ -15,25 +15,17 @@ import {
   type SoilMoistureResult,
 } from "../utils/precip-ai-client";
 import { logToolTokens } from "../utils/token-logger";
+import { storeUIData } from "../utils/ui-data-cache";
 
 /**
- * Build natural language summary for agent responses
+ * Build minimal text summary for agent responses (reduces token usage)
  */
 function buildAgentSummary(
   result: SoilMoistureResult,
   fieldName: string | null,
   startDate: string,
   endDate: string
-): {
-  fieldName: string | null;
-  dateRange: string;
-  averageMoisture: number | null;
-  moistureDescription: string;
-  minMoisture: number | null;
-  maxMoisture: number | null;
-  daysWithData: number;
-  trend: string;
-} {
+): string {
   const moistureDescription = result.averageMoisture !== null
     ? getMoistureDescription(result.averageMoisture)
     : "No data";
@@ -53,16 +45,23 @@ function buildAgentSummary(
     else if (change < -3) trend = "decreasing";
   }
 
-  return {
-    fieldName,
-    dateRange: `${startDate} to ${endDate}`,
-    averageMoisture: result.averageMoisture,
-    moistureDescription,
-    minMoisture: result.minMoisture,
-    maxMoisture: result.maxMoisture,
-    daysWithData: result.days.filter(d => d.soil_moisture !== null).length,
-    trend,
-  };
+  const daysWithData = result.days.filter(d => d.soil_moisture !== null).length;
+
+  // Build minimal text summary
+  const parts: string[] = [];
+  if (fieldName) parts.push(fieldName);
+  parts.push(`${startDate} to ${endDate}`);
+  if (result.averageMoisture !== null) {
+    parts.push(`Avg: ${Math.round(result.averageMoisture * 10) / 10}%`);
+  }
+  parts.push(moistureDescription);
+  if (result.minMoisture !== null && result.maxMoisture !== null) {
+    parts.push(`Range: ${Math.round(result.minMoisture * 10) / 10}-${Math.round(result.maxMoisture * 10) / 10}%`);
+  }
+  parts.push(`Trend: ${trend}`);
+  parts.push(`${daysWithData} days of data`);
+
+  return parts.join(". ") + ".";
 }
 
 /**
@@ -232,23 +231,27 @@ export const getSoilMoistureTool = createTool({
       );
 
       // Build response based on includeDaily flag
+      // IMPORTANT: Store uiData in cache to prevent large payloads going to LLM
       let toolResult;
       if (includeDaily) {
+        const uiData = {
+          fieldName: resolvedFieldName,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          timeZoneId: result.timeZoneId,
+          startDate,
+          endDate,
+          days: result.days,
+          averageMoisture: result.averageMoisture,
+          minMoisture: result.minMoisture,
+          maxMoisture: result.maxMoisture,
+        };
+        // Store in cache, return only reference to LLM
+        const uiDataRef = storeUIData(uiData);
         toolResult = {
           success: true,
           agentSummary,
-          uiData: {
-            fieldName: resolvedFieldName,
-            latitude: result.latitude,
-            longitude: result.longitude,
-            timeZoneId: result.timeZoneId,
-            startDate,
-            endDate,
-            days: result.days,
-            averageMoisture: result.averageMoisture,
-            minMoisture: result.minMoisture,
-            maxMoisture: result.maxMoisture,
-          },
+          uiDataRef,
         };
       } else {
         // Default: condensed response with just summary statistics
@@ -258,7 +261,8 @@ export const getSoilMoistureTool = createTool({
         };
       }
 
-      logToolTokens("getSoilMoisture", context, toolResult);
+      // Log only agentSummary for accurate LLM context tracking (uiData is stripped)
+      logToolTokens("getSoilMoisture", context, { success: true, agentSummary });
       return toolResult;
     } catch (error) {
       return {

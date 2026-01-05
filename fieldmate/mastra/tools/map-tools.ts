@@ -11,6 +11,7 @@ import {
   type FieldBoundaryData,
 } from "@/lib/geo-utils";
 import { logToolTokens } from "../utils/token-logger";
+import { storeUIData } from "../utils/ui-data-cache";
 
 /**
  * Tool: Show Fields On Map
@@ -150,22 +151,25 @@ export const showFieldsOnMapTool = createTool({
         `Fields: ${fieldNamesList}.` +
         (enabledOverlays.length > 0 ? ` Overlays: ${enabledOverlays.join(", ")}.` : "");
 
+      // IMPORTANT: Store uiData in cache to prevent large GeoJSON going to LLM
+      const uiData = {
+        geoJSON,
+        bounds,
+        center: [
+          (boundingBox.minLat + boundingBox.maxLat) / 2,
+          (boundingBox.minLng + boundingBox.maxLng) / 2,
+        ] as [number, number],
+        overlays: {
+          soil: enableSoilOverlay ?? false,
+          hydro: enableHydroOverlay ?? false,
+        },
+      };
+      // Store in cache, return only reference to LLM (saves ~12,000-50,000 tokens)
+      const uiDataRef = storeUIData(uiData);
+
       const result = {
         success: true,
-        // UI data - full payload for map rendering
-        uiData: {
-          geoJSON,
-          bounds,
-          center: [
-            (boundingBox.minLat + boundingBox.maxLat) / 2,
-            (boundingBox.minLng + boundingBox.maxLng) / 2,
-          ] as [number, number],
-          overlays: {
-            soil: enableSoilOverlay ?? false,
-            hydro: enableHydroOverlay ?? false,
-          },
-        },
-        // Minimal text summary for LLM context
+        uiDataRef,
         agentSummary,
       };
 

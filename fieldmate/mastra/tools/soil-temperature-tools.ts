@@ -17,36 +17,27 @@ import {
   type SoilTemperatureResult,
 } from "../utils/precip-ai-client";
 import { logToolTokens } from "../utils/token-logger";
+import { storeUIData } from "../utils/ui-data-cache";
 
 /**
- * Build natural language summary for agent responses
+ * Build minimal text summary for agent responses (reduces token usage)
  */
 function buildAgentSummary(
   result: SoilTemperatureResult,
   fieldName: string | null,
   showTrend: boolean
-): {
-  fieldName: string | null;
-  currentTemperatureCelsius: number | null;
-  currentTemperatureFahrenheit: number | null;
-  temperatureDescription: string;
-  averageTemperatureCelsius: number | null;
-  minTemperatureCelsius: number | null;
-  maxTemperatureCelsius: number | null;
-  hoursOfData: number;
-  trend: string;
-} {
+): string {
   const currentTemp = result.currentTemperature;
   const tempDescription = currentTemp !== null
     ? getSoilTempDescription(currentTemp)
     : "No data";
+  const currentTempF = currentTemp !== null ? celsiusToFahrenheit(currentTemp) : null;
 
   // Calculate trend (comparing first half to second half of period)
   let trend = "stable";
   if (showTrend && result.hours.length >= 4) {
     const temps: number[] = [];
     for (const hour of result.hours) {
-      // Extract temperature from hour data (handle different field names)
       const hourData = hour as unknown as Record<string, unknown>;
       const temp =
         (typeof hourData.temperature === "number" ? hourData.temperature : null) ??
@@ -61,27 +52,32 @@ function buildAgentSummary(
       const midpoint = Math.floor(temps.length / 2);
       const firstHalf = temps.slice(0, midpoint);
       const secondHalf = temps.slice(midpoint);
-
       const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
       const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
-
       const change = secondAvg - firstAvg;
       if (change > 1) trend = "warming";
       else if (change < -1) trend = "cooling";
     }
   }
 
-  return {
-    fieldName,
-    currentTemperatureCelsius: currentTemp,
-    currentTemperatureFahrenheit: currentTemp !== null ? celsiusToFahrenheit(currentTemp) : null,
-    temperatureDescription: tempDescription,
-    averageTemperatureCelsius: result.averageTemperature,
-    minTemperatureCelsius: result.minTemperature,
-    maxTemperatureCelsius: result.maxTemperature,
-    hoursOfData: result.hours.length,
-    trend,
-  };
+  // Build minimal text summary
+  const parts: string[] = [];
+  if (fieldName) parts.push(fieldName);
+  if (currentTempF !== null) {
+    parts.push(`Current: ${currentTempF}°F (${currentTemp}°C)`);
+  }
+  parts.push(tempDescription);
+  if (result.minTemperature !== null && result.maxTemperature !== null) {
+    const minF = celsiusToFahrenheit(result.minTemperature);
+    const maxF = celsiusToFahrenheit(result.maxTemperature);
+    parts.push(`Range: ${minF}-${maxF}°F`);
+  }
+  if (showTrend) {
+    parts.push(`Trend: ${trend}`);
+    parts.push(`${result.hours.length} hours of data`);
+  }
+
+  return parts.join(". ") + ".";
 }
 
 /**
@@ -242,22 +238,26 @@ export const getSoilTemperatureTool = createTool({
       );
 
       // Build response based on includeTrend flag
+      // IMPORTANT: Store uiData in cache to prevent 6,000+ tokens going to LLM
       let toolResult;
       if (includeTrend) {
+        const uiData = {
+          fieldName: resolvedFieldName,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          timeZoneId: result.timeZoneId,
+          hours: result.hours,
+          currentTemperature: result.currentTemperature,
+          averageTemperature: result.averageTemperature,
+          minTemperature: result.minTemperature,
+          maxTemperature: result.maxTemperature,
+        };
+        // Store in cache, return only reference to LLM (saves ~6,000 tokens)
+        const uiDataRef = storeUIData(uiData);
         toolResult = {
           success: true,
           agentSummary,
-          uiData: {
-            fieldName: resolvedFieldName,
-            latitude: result.latitude,
-            longitude: result.longitude,
-            timeZoneId: result.timeZoneId,
-            hours: result.hours,
-            currentTemperature: result.currentTemperature,
-            averageTemperature: result.averageTemperature,
-            minTemperature: result.minTemperature,
-            maxTemperature: result.maxTemperature,
-          },
+          uiDataRef,
         };
       } else {
         // Default: just return current temperature summary
@@ -267,7 +267,8 @@ export const getSoilTemperatureTool = createTool({
         };
       }
 
-      logToolTokens("getSoilTemperature", context, toolResult);
+      // Log only agentSummary for accurate LLM context tracking (uiData is stripped)
+      logToolTokens("getSoilTemperature", context, { success: true, agentSummary });
       return toolResult;
     } catch (error) {
       return {

@@ -5,6 +5,7 @@ import {
   createUIMessageStreamResponse,
 } from "ai";
 import type { CoreMessage } from "ai";
+import { getUIData, removeUIData } from "@/mastra/utils/ui-data-cache";
 
 export const maxDuration = 60;
 
@@ -127,6 +128,68 @@ async function streamWithRetry(
 }
 
 /**
+ * Strip uiData from tool results to reduce LLM context size.
+ * UI components receive uiData from the current stream response,
+ * but historical tool results don't need uiData in LLM context.
+ * This can save 50,000-150,000 tokens per multi-tool conversation.
+ */
+function stripUIDataFromMessages(messages: CoreMessage[]): CoreMessage[] {
+  // Deep clone and strip uiData from tool results
+  // Using JSON parse/stringify to avoid complex type issues with AI SDK types
+  const cloned = JSON.parse(JSON.stringify(messages)) as CoreMessage[];
+
+  for (const msg of cloned) {
+    if (msg.role === "tool" && Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        // Access output property which contains the tool result
+        const toolPart = part as unknown as { output?: Record<string, unknown> };
+        if (toolPart.output && typeof toolPart.output === "object") {
+          delete toolPart.output.uiData;
+        }
+      }
+    }
+  }
+
+  return cloned;
+}
+
+/**
+ * Resolve uiDataRef to actual uiData from cache.
+ * Tool results contain `uiDataRef` instead of `uiData` to save LLM tokens.
+ * This function replaces `uiDataRef` with the cached `uiData` for the client.
+ */
+function resolveUIDataRefs(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    return value.map(resolveUIDataRefs);
+  }
+
+  // Handle objects - look for uiDataRef
+  const obj = value as Record<string, unknown>;
+
+  // Check if this object has a uiDataRef that needs resolving
+  if ("uiDataRef" in obj && typeof obj.uiDataRef === "string") {
+    const uiData = getUIData(obj.uiDataRef);
+    if (uiData) {
+      // Remove the ref from cache after using it
+      removeUIData(obj.uiDataRef);
+      // Replace uiDataRef with actual uiData
+      const { uiDataRef: _unused, ...rest } = obj;
+      return { ...rest, uiData };
+    }
+  }
+
+  // Recursively process nested objects
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    result[key] = resolveUIDataRefs(val);
+  }
+  return result;
+}
+
+/**
  * Sanitize messages to remove orphaned tool results that would cause
  * OpenAI API errors. This happens when tool results reference call_ids
  * that aren't in the current conversation context.
@@ -169,15 +232,19 @@ export async function POST(req: Request) {
   // Sanitize messages to remove orphaned tool results
   const sanitizedMessages = sanitizeMessages(messages);
 
+  // Strip uiData from historical tool results to reduce LLM context size
+  const messagesForLLM = stripUIDataFromMessages(sanitizedMessages);
+
   const agent = mastra.getAgent("fieldMate");
 
   // Use retry wrapper to handle rate limits with exponential backoff
-  const stream = await streamWithRetry(agent, sanitizedMessages);
+  const stream = await streamWithRetry(agent, messagesForLLM);
 
   // Convert Mastra stream to AI SDK compatible format
   const aiSdkStream = toAISdkFormat(stream, { from: "agent" });
 
   // Use createUIMessageStream to properly handle the ReadableStream
+  // Intercept stream to resolve uiDataRef -> uiData from cache
   const uiMessageStream = createUIMessageStream({
     execute: async ({ writer }) => {
       const reader = aiSdkStream.getReader();
@@ -185,7 +252,10 @@ export async function POST(req: Request) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          writer.write(value);
+          // Resolve any uiDataRef to actual uiData from cache
+          // Cast back to original type since we're only modifying uiDataRef -> uiData
+          const resolvedValue = resolveUIDataRefs(value) as typeof value;
+          writer.write(resolvedValue);
         }
       } finally {
         reader.releaseLock();

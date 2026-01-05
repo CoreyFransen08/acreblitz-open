@@ -39,23 +39,12 @@ interface SoilTemperatureUIData {
   maxTemperature: number | null;
 }
 
-interface SoilTemperatureAgentSummary {
-  fieldName: string | null;
-  currentTemperatureCelsius: number | null;
-  currentTemperatureFahrenheit: number | null;
-  temperatureDescription: string;
-  averageTemperatureCelsius: number | null;
-  minTemperatureCelsius: number | null;
-  maxTemperatureCelsius: number | null;
-  hoursOfData: number;
-  trend: string;
-}
-
 interface SoilTemperatureToolResult {
   success: boolean;
   error?: string;
   uiData?: SoilTemperatureUIData;
-  agentSummary?: SoilTemperatureAgentSummary;
+  // agentSummary is now a text string for LLM context (not used by UI)
+  agentSummary?: string;
 }
 
 function SoilTemperatureSkeleton() {

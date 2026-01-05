@@ -35,21 +35,12 @@ interface PrecipitationUIData {
   hoursWithPrecip: number;
 }
 
-interface PrecipitationAgentSummary {
-  fieldName: string | null;
-  dateRange: string;
-  totalPrecipitationInches: number;
-  precipDescription: string;
-  maxHourlyInches: number;
-  hoursWithPrecip: number;
-  precipType: "rain" | "snow" | "mixed" | null;
-}
-
 interface PrecipitationToolResult {
   success: boolean;
   error?: string;
   uiData?: PrecipitationUIData;
-  agentSummary?: PrecipitationAgentSummary;
+  // agentSummary is now a text string for LLM context (not used by UI)
+  agentSummary?: string;
 }
 
 function PrecipitationSkeleton() {

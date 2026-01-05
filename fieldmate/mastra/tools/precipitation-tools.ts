@@ -15,24 +15,17 @@ import {
   type HourlyPrecipitationResult,
 } from "../utils/precip-ai-client";
 import { logToolTokens } from "../utils/token-logger";
+import { storeUIData } from "../utils/ui-data-cache";
 
 /**
- * Build natural language summary for agent responses
+ * Build minimal text summary for agent responses (reduces token usage)
  */
 function buildAgentSummary(
   result: HourlyPrecipitationResult,
   fieldName: string | null,
   startDate: string,
   endDate: string
-): {
-  fieldName: string | null;
-  dateRange: string;
-  totalPrecipitationInches: number;
-  precipDescription: string;
-  maxHourlyInches: number;
-  hoursWithPrecip: number;
-  precipType: "rain" | "snow" | "mixed" | null;
-} {
+): string {
   const precipDescription = getPrecipDescription(result.totalPrecipitationInches);
 
   // Determine dominant precip type from hours with precipitation
@@ -52,15 +45,17 @@ function buildAgentSummary(
     else precipType = "mixed";
   }
 
-  return {
-    fieldName,
-    dateRange: `${startDate} to ${endDate}`,
-    totalPrecipitationInches: result.totalPrecipitationInches,
-    precipDescription,
-    maxHourlyInches: result.maxHourlyInches,
-    hoursWithPrecip: result.hoursWithPrecip,
-    precipType,
-  };
+  // Build minimal text summary
+  const parts: string[] = [];
+  if (fieldName) parts.push(fieldName);
+  parts.push(`${startDate} to ${endDate}`);
+  parts.push(`Total: ${result.totalPrecipitationInches.toFixed(2)}"`);
+  parts.push(precipDescription);
+  if (precipType) parts.push(`Type: ${precipType}`);
+  parts.push(`Max hourly: ${result.maxHourlyInches.toFixed(3)}"`);
+  parts.push(`${result.hoursWithPrecip} hours with precip`);
+
+  return parts.join(". ") + ".";
 }
 
 /**
@@ -221,23 +216,27 @@ export const getHourlyPrecipitationTool = createTool({
       // Automatically show chart for ranges > 1 day, or when explicitly requested
       const shouldShowChart = includeHourly === true || validDays > 1;
 
+      // IMPORTANT: Store uiData in cache to prevent large payloads going to LLM
       let toolResult;
       if (shouldShowChart) {
+        const uiData = {
+          fieldName: resolvedFieldName,
+          latitude: result.latitude,
+          longitude: result.longitude,
+          timeZoneId: result.timeZoneId,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate,
+          hours: result.hours,
+          totalPrecipitationInches: result.totalPrecipitationInches,
+          maxHourlyInches: result.maxHourlyInches,
+          hoursWithPrecip: result.hoursWithPrecip,
+        };
+        // Store in cache, return only reference to LLM
+        const uiDataRef = storeUIData(uiData);
         toolResult = {
           success: true,
           agentSummary,
-          uiData: {
-            fieldName: resolvedFieldName,
-            latitude: result.latitude,
-            longitude: result.longitude,
-            timeZoneId: result.timeZoneId,
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
-            hours: result.hours,
-            totalPrecipitationInches: result.totalPrecipitationInches,
-            maxHourlyInches: result.maxHourlyInches,
-            hoursWithPrecip: result.hoursWithPrecip,
-          },
+          uiDataRef,
         };
       } else {
         // Only for single-day requests without explicit includeHourly
@@ -247,7 +246,8 @@ export const getHourlyPrecipitationTool = createTool({
         };
       }
 
-      logToolTokens("getHourlyPrecipitation", context, toolResult);
+      // Log only agentSummary for accurate LLM context tracking (uiData is stripped)
+      logToolTokens("getHourlyPrecipitation", context, { success: true, agentSummary });
       return toolResult;
     } catch (error) {
       return {

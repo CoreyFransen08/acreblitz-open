@@ -20,6 +20,7 @@ import type {
   Geometry,
 } from "geojson";
 import { logToolTokens } from "../utils/token-logger";
+import { storeUIData } from "../utils/ui-data-cache";
 
 // Type for soil feature properties from SSURGO
 interface SoilProperties {
@@ -389,22 +390,25 @@ export const getSoilDataTool = createTool({
         (composition.weightedSlope ? `Slope: ${composition.weightedSlope}%. ` : "") +
         `Top soils: ${topSoilsText}`;
 
+      // IMPORTANT: Store uiData in cache to prevent large GeoJSON going to LLM
+      const uiData = {
+        fieldGeoJSON,
+        soilGeoJSON,
+        bounds,
+        center: [
+          (boundingBox.minLat + boundingBox.maxLat) / 2,
+          (boundingBox.minLng + boundingBox.maxLng) / 2,
+        ] as [number, number],
+        fieldName,
+        fieldAreaAcres: Math.round(fieldAreaAcres * 10) / 10,
+        soilCount: clippedFeatures.length,
+      };
+      // Store in cache, return only reference to LLM (saves ~25,000-75,000 tokens)
+      const uiDataRef = storeUIData(uiData);
+
       const result = {
         success: true,
-        // UI data - full payload for map rendering
-        uiData: {
-          fieldGeoJSON,
-          soilGeoJSON,
-          bounds,
-          center: [
-            (boundingBox.minLat + boundingBox.maxLat) / 2,
-            (boundingBox.minLng + boundingBox.maxLng) / 2,
-          ] as [number, number],
-          fieldName,
-          fieldAreaAcres: Math.round(fieldAreaAcres * 10) / 10,
-          soilCount: clippedFeatures.length,
-        },
-        // Minimal text summary for LLM context
+        uiDataRef,
         agentSummary,
       };
 

@@ -26,8 +26,13 @@ const fieldMateMemory = new Memory({
         "get_field_boundaries",  // Full geometry data
       ],
     }),
-    // Limit total context to match OpenAI rate limit
-    new TokenLimiter(30000),
+    // CRITICAL: With 30K TPM rate limit, each tool result with uiData is ~6-13K tokens
+    // Limit memory to 8K to leave room for:
+    //   - System prompt: ~1.9K
+    //   - Tool definitions: ~1K
+    //   - Current tool result with uiData: ~6-13K
+    //   - Total per request: ~17-24K (under 30K)
+    new TokenLimiter(8000),
   ],
 });
 
@@ -98,9 +103,9 @@ Area units: Always convert to acres (ac) for display unless the user specifies o
 
 Be accurate, efficient, and farmer-friendly in your responses. Use agricultural terminology appropriately.`,
 
-  // Use .chat() to force Chat Completions API instead of Responses API
-  // The Responses API has issues with multi-step tool calling
-  model: openai.chat("gpt-4o"),
+  // Use gpt-4o-mini for higher rate limits (200K+ TPM vs 30K for gpt-4o)
+  // Also ~10x cheaper. Quality is sufficient for tool-calling agents.
+  model: openai.chat("gpt-4o-mini"),
 
   tools: {
     ...johnDeereTools,
