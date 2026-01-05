@@ -16,6 +16,7 @@ import {
   cachedWorkPlans,
 } from "@/db/schema/john-deere-cache";
 import { eq } from "drizzle-orm";
+import { logToolTokens } from "../utils/token-logger";
 
 /**
  * Tool: Check Connection Status
@@ -219,7 +220,7 @@ export const getFieldBoundariesTool = createTool({
         }
       }
 
-      return {
+      const toolResult = {
         success: true,
         boundaries: result.data.map((b) => ({
           id: b.id,
@@ -229,6 +230,9 @@ export const getFieldBoundariesTool = createTool({
           geometry: b.geometry,
         })),
       };
+
+      logToolTokens("get_field_boundaries", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,
@@ -296,19 +300,26 @@ export const listWorkPlansTool = createTool({
         }
       }
 
-      return {
+      // Limit work plans to first 10 and truncate instructions for token efficiency
+      const limitedWorkPlans = result.data.slice(0, 10).map((wp) => ({
+        id: wp.id,
+        workOrder: wp.workOrder,
+        workType: wp.workType,
+        workStatus: wp.workStatus,
+        year: wp.year,
+        fieldId: wp.fieldId,
+        instructions: wp.instructions ? wp.instructions.slice(0, 100) + (wp.instructions.length > 100 ? "..." : "") : null,
+      }));
+
+      const toolResult = {
         success: true,
-        workPlans: result.data.map((wp) => ({
-          id: wp.id,
-          workOrder: wp.workOrder,
-          workType: wp.workType,
-          workStatus: wp.workStatus,
-          year: wp.year,
-          fieldId: wp.fieldId,
-          instructions: wp.instructions,
-        })),
+        workPlans: limitedWorkPlans,
         totalCount: result.pagination.totalItems,
+        showing: Math.min(10, result.data.length),
       };
+
+      logToolTokens("list_work_plans", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,
@@ -372,7 +383,8 @@ export const getWorkPlanTool = createTool({
         await db.insert(cachedWorkPlans).values(wpData);
       }
 
-      return {
+      // Limit operations and assignments for token efficiency
+      const toolResult = {
         success: true,
         workPlan: {
           id: workPlan.id,
@@ -382,10 +394,15 @@ export const getWorkPlanTool = createTool({
           year: workPlan.year,
           fieldId: workPlan.fieldId,
           instructions: workPlan.instructions,
-          operations: workPlan.operations,
-          assignments: workPlan.assignments,
+          operations: workPlan.operations?.slice(0, 5),
+          operationsCount: workPlan.operations?.length ?? 0,
+          assignments: workPlan.assignments?.slice(0, 5),
+          assignmentsCount: workPlan.assignments?.length ?? 0,
         },
       };
+
+      logToolTokens("get_work_plan", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,

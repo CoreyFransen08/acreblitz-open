@@ -10,6 +10,7 @@ import {
   type GeoJSONGeometry,
   type FieldBoundaryData,
 } from "@/lib/geo-utils";
+import { logToolTokens } from "../utils/token-logger";
 
 /**
  * Tool: Show Fields On Map
@@ -139,7 +140,17 @@ export const showFieldsOnMapTool = createTool({
       if (enableSoilOverlay) enabledOverlays.push("soil");
       if (enableHydroOverlay) enabledOverlays.push("hydrology");
 
-      return {
+      // Build minimal text summary for LLM context
+      const fieldNamesList = boundaryData.length <= 3
+        ? boundaryData.map((b) => b.fieldName).join(", ")
+        : `${boundaryData.slice(0, 3).map((b) => b.fieldName).join(", ")} +${boundaryData.length - 3} more`;
+
+      const agentSummary = `Displayed ${boundaryData.length} field(s) on map. ` +
+        `Total: ${Math.round(totalAcres * 10) / 10} ac. ` +
+        `Fields: ${fieldNamesList}.` +
+        (enabledOverlays.length > 0 ? ` Overlays: ${enabledOverlays.join(", ")}.` : "");
+
+      const result = {
         success: true,
         // UI data - full payload for map rendering
         uiData: {
@@ -154,14 +165,13 @@ export const showFieldsOnMapTool = createTool({
             hydro: enableHydroOverlay ?? false,
           },
         },
-        // Agent summary - abbreviated for context
-        agentSummary: {
-          fieldCount: boundaryData.length,
-          totalAcres: Math.round(totalAcres * 10) / 10,
-          fieldNames: boundaryData.map((b) => b.fieldName),
-          overlaysEnabled: enabledOverlays,
-        },
+        // Minimal text summary for LLM context
+        agentSummary,
       };
+
+      // Log only the agentSummary size for accurate LLM context tracking
+      logToolTokens("showFieldsOnMap", context, { success: true, agentSummary });
+      return result;
     } catch (error) {
       return {
         success: false,

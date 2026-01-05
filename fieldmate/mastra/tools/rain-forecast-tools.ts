@@ -12,6 +12,7 @@ import {
   fetchRainForecast,
   type RainForecastData,
 } from "../utils/nws-rain-forecast";
+import { logToolTokens } from "../utils/token-logger";
 
 /**
  * Build natural language summary for agent responses
@@ -261,8 +262,9 @@ export const getRainForecastTool = createTool({
       const agentSummary = buildAgentSummary(forecast, resolvedFieldName);
 
       // Build response based on includeFullForecast flag
+      let toolResult;
       if (includeFullForecast) {
-        return {
+        toolResult = {
           success: true,
           agentSummary,
           uiData: {
@@ -275,11 +277,14 @@ export const getRainForecastTool = createTool({
         };
       } else {
         // Default: condensed response with just the 48hr total
-        return {
+        toolResult = {
           success: true,
           agentSummary,
         };
       }
+
+      logToolTokens("getRainForecast", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,

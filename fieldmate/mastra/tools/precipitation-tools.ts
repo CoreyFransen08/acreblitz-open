@@ -14,6 +14,7 @@ import {
   getPrecipDescription,
   type HourlyPrecipitationResult,
 } from "../utils/precip-ai-client";
+import { logToolTokens } from "../utils/token-logger";
 
 /**
  * Build natural language summary for agent responses
@@ -220,8 +221,9 @@ export const getHourlyPrecipitationTool = createTool({
       // Automatically show chart for ranges > 1 day, or when explicitly requested
       const shouldShowChart = includeHourly === true || validDays > 1;
 
+      let toolResult;
       if (shouldShowChart) {
-        return {
+        toolResult = {
           success: true,
           agentSummary,
           uiData: {
@@ -239,11 +241,14 @@ export const getHourlyPrecipitationTool = createTool({
         };
       } else {
         // Only for single-day requests without explicit includeHourly
-        return {
+        toolResult = {
           success: true,
           agentSummary,
         };
       }
+
+      logToolTokens("getHourlyPrecipitation", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,

@@ -1,4 +1,6 @@
 import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
+import { ToolCallFilter, TokenLimiter } from "@mastra/memory/processors";
 import { openai } from "@ai-sdk/openai";
 import { johnDeereTools } from "../tools/john-deere-tools";
 import { weatherTools } from "../tools/weather-tools";
@@ -9,8 +11,29 @@ import { soilMoistureTools } from "../tools/soil-moisture-tools";
 import { soilTemperatureTools } from "../tools/soil-temperature-tools";
 import { precipitationTools } from "../tools/precipitation-tools";
 
+// Configure memory with processors to reduce context usage
+const fieldMateMemory = new Memory({
+  processors: [
+    // Strip verbose tool calls from past messages to reduce context
+    new ToolCallFilter({
+      exclude: [
+        "getSoilData",           // Large GeoJSON payloads
+        "showFieldsOnMap",       // Full GeoJSON FeatureCollections
+        "getHourlyPrecipitation", // Up to 336 hourly records
+        "getSoilTemperature",    // Hourly trend data
+        "getSoilMoisture",       // Daily trend data
+        "getRainForecast",       // Forecast arrays
+        "get_field_boundaries",  // Full geometry data
+      ],
+    }),
+    // Limit total context to match OpenAI rate limit
+    new TokenLimiter(30000),
+  ],
+});
+
 export const fieldMateAgent = new Agent({
   name: "FieldMate",
+  memory: fieldMateMemory,
   instructions: `You are FieldMate, an AI assistant specialized in helping farmers and agricultural professionals manage their John Deere Operations Center data.
 
 Your capabilities include:

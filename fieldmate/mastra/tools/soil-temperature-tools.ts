@@ -16,6 +16,7 @@ import {
   celsiusToFahrenheit,
   type SoilTemperatureResult,
 } from "../utils/precip-ai-client";
+import { logToolTokens } from "../utils/token-logger";
 
 /**
  * Build natural language summary for agent responses
@@ -241,8 +242,9 @@ export const getSoilTemperatureTool = createTool({
       );
 
       // Build response based on includeTrend flag
+      let toolResult;
       if (includeTrend) {
-        return {
+        toolResult = {
           success: true,
           agentSummary,
           uiData: {
@@ -259,11 +261,14 @@ export const getSoilTemperatureTool = createTool({
         };
       } else {
         // Default: just return current temperature summary
-        return {
+        toolResult = {
           success: true,
           agentSummary,
         };
       }
+
+      logToolTokens("getSoilTemperature", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,

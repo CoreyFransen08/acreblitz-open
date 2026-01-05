@@ -14,6 +14,7 @@ import {
   getMoistureDescription,
   type SoilMoistureResult,
 } from "../utils/precip-ai-client";
+import { logToolTokens } from "../utils/token-logger";
 
 /**
  * Build natural language summary for agent responses
@@ -231,8 +232,9 @@ export const getSoilMoistureTool = createTool({
       );
 
       // Build response based on includeDaily flag
+      let toolResult;
       if (includeDaily) {
-        return {
+        toolResult = {
           success: true,
           agentSummary,
           uiData: {
@@ -250,11 +252,14 @@ export const getSoilMoistureTool = createTool({
         };
       } else {
         // Default: condensed response with just summary statistics
-        return {
+        toolResult = {
           success: true,
           agentSummary,
         };
       }
+
+      logToolTokens("getSoilMoisture", context, toolResult);
+      return toolResult;
     } catch (error) {
       return {
         success: false,

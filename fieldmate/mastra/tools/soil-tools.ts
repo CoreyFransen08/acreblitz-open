@@ -19,6 +19,7 @@ import type {
   FeatureCollection,
   Geometry,
 } from "geojson";
+import { logToolTokens } from "../utils/token-logger";
 
 // Type for soil feature properties from SSURGO
 interface SoilProperties {
@@ -375,7 +376,20 @@ export const getSoilDataTool = createTool({
       // 9. Calculate bounds for map
       const bounds = toLeafletBounds(boundingBox);
 
-      return {
+      // Build a minimal text summary for LLM context (reduces tokens significantly)
+      const topSoilsText = composition.soils
+        .slice(0, 2)
+        .map((s) => `${s.name} (${s.percent}%)`)
+        .join(", ");
+
+      const agentSummary = `${fieldName}: ${Math.round(fieldAreaAcres * 10) / 10} ac. ` +
+        `Dominant: ${composition.dominantSoil} (${composition.dominantSoilPercent}%). ` +
+        `Drainage: ${composition.primaryDrainage || "unknown"}. ` +
+        `${clippedFeatures.length} soil types. ` +
+        (composition.weightedSlope ? `Slope: ${composition.weightedSlope}%. ` : "") +
+        `Top soils: ${topSoilsText}`;
+
+      const result = {
         success: true,
         // UI data - full payload for map rendering
         uiData: {
@@ -390,23 +404,13 @@ export const getSoilDataTool = createTool({
           fieldAreaAcres: Math.round(fieldAreaAcres * 10) / 10,
           soilCount: clippedFeatures.length,
         },
-        // Agent summary - abbreviated for LLM context
-        agentSummary: {
-          fieldName,
-          fieldAreaAcres: Math.round(fieldAreaAcres * 10) / 10,
-          dominantSoil: composition.dominantSoil,
-          dominantSoilPercent: composition.dominantSoilPercent,
-          soilTypeCount: clippedFeatures.length,
-          primaryDrainage: composition.primaryDrainage,
-          weightedSlope: composition.weightedSlope,
-          weightedAWC: composition.weightedAWC,
-          soils: composition.soils.slice(0, 3).map((s) => ({
-            name: s.name,
-            percent: s.percent,
-            drainage: s.drainage,
-          })),
-        },
+        // Minimal text summary for LLM context
+        agentSummary,
       };
+
+      // Log only the agentSummary size for accurate LLM context tracking
+      logToolTokens("getSoilData", context, { success: true, agentSummary });
+      return result;
     } catch (error) {
       return {
         success: false,
