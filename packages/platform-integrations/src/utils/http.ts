@@ -117,22 +117,40 @@ export async function postFormUrlEncoded<T>(
 }
 
 /**
+ * Unit of measure system for John Deere API
+ */
+export type UOMSystem = 'METRIC' | 'ENGLISH';
+
+/**
+ * Options for authenticated requests
+ */
+export interface AuthenticatedRequestOptions extends HttpRequestOptions {
+  /** Unit of measure system for area/distance values */
+  uomSystem?: UOMSystem;
+}
+
+/**
  * Make an authenticated API request with Bearer token
  */
 export async function authenticatedRequest<T>(
   url: string,
   accessToken: string,
-  options: HttpRequestOptions = {}
+  options: AuthenticatedRequestOptions = {}
 ): Promise<T> {
-  const { headers = {}, ...restOptions } = options;
+  const { headers = {}, uomSystem, ...restOptions } = options;
+
+  // Build headers - include UOM system header for area calculations
+  const requestHeaders: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+    Accept: 'application/vnd.deere.axiom.v3+json',
+    // Default to ENGLISH (acres) - can be overridden via options
+    'Accept-UOM-System': uomSystem ?? 'ENGLISH',
+    ...headers,
+  };
 
   return httpRequest<T>(url, {
     ...restOptions,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/vnd.deere.axiom.v3+json',
-      ...headers,
-    },
+    headers: requestHeaders,
   });
 }
 

@@ -66,12 +66,12 @@ export function mapJohnDeereField(
 ): UnifiedField {
   const targetUnit = options?.units?.areaUnit ?? DEFAULT_AREA_UNIT;
   
-  // Map area if available
+  // Map area if available (JD API uses valueAsDouble)
   let area: AreaMeasurement | undefined;
-  if (jdField.area) {
+  if (jdField.area && jdField.area.valueAsDouble != null) {
     const sourceUnit = parseAreaUnit(jdField.area.unit);
     area = {
-      value: convertArea(jdField.area.value, sourceUnit, targetUnit),
+      value: convertArea(jdField.area.valueAsDouble, sourceUnit, targetUnit),
       unit: targetUnit,
     };
   }
@@ -130,22 +130,22 @@ export function mapJohnDeereBoundary(
   const includeGeometry = options?.geometry?.includeGeometry ?? true;
   const simplifyTolerance = options?.geometry?.simplifyTolerance ?? 0;
   
-  // Map area if available
+  // Map area if available (JD API uses valueAsDouble)
   let area: AreaMeasurement | undefined;
-  if (jdBoundary.area) {
+  if (jdBoundary.area && jdBoundary.area.valueAsDouble != null) {
     const sourceUnit = parseAreaUnit(jdBoundary.area.unit);
     area = {
-      value: convertArea(jdBoundary.area.value, sourceUnit, targetUnit),
+      value: convertArea(jdBoundary.area.valueAsDouble, sourceUnit, targetUnit),
       unit: targetUnit,
     };
   }
-  
-  // Map workable area if available
+
+  // Map workable area if available (JD API uses valueAsDouble)
   let workableArea: AreaMeasurement | undefined;
-  if (jdBoundary.workableArea) {
+  if (jdBoundary.workableArea && jdBoundary.workableArea.valueAsDouble != null) {
     const sourceUnit = parseAreaUnit(jdBoundary.workableArea.unit);
     workableArea = {
-      value: convertArea(jdBoundary.workableArea.value, sourceUnit, targetUnit),
+      value: convertArea(jdBoundary.workableArea.valueAsDouble, sourceUnit, targetUnit),
       unit: targetUnit,
     };
   }

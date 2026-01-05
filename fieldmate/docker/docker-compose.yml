@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: fieldmate
+      POSTGRES_PASSWORD: fieldmate_dev_password
+      POSTGRES_DB: fieldmate
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fieldmate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fieldmate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://fieldmate:fieldmate_dev_password@postgres:5432/fieldmate
+      JOHN_DEERE_CLIENT_ID: ${JOHN_DEERE_CLIENT_ID}
+      JOHN_DEERE_CLIENT_SECRET: ${JOHN_DEERE_CLIENT_SECRET}
+      JOHN_DEERE_APPLICATION_ID: ${JOHN_DEERE_APPLICATION_ID}
+      JOHN_DEERE_REDIRECT_URI: ${JOHN_DEERE_REDIRECT_URI:-http://localhost:3000/api/auth/callback}
+      JOHN_DEERE_USE_SANDBOX: ${JOHN_DEERE_USE_SANDBOX:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

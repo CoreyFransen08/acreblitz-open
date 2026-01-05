@@ -184,9 +184,10 @@ export interface Field {
   id: string;
   /** Field name */
   name: string;
-  /** Area of the field */
+  /** Area of the field (JD uses MeasurementAsDouble format) */
   area?: {
-    value: number;
+    '@type'?: string;
+    valueAsDouble: number;
     unit: string;
   };
   /** Archived status */
@@ -209,12 +210,14 @@ export interface Boundary {
   name?: string;
   /** Area of the boundary */
   area?: {
-    value: number;
+    '@type'?: string;
+    valueAsDouble: number;
     unit: string;
   };
   /** Workable area of the boundary */
   workableArea?: {
-    value: number;
+    '@type'?: string;
+    valueAsDouble: number;
     unit: string;
   };
   /** Whether this is the active boundary */
